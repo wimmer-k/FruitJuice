@@ -1,0 +1,3 @@
+#define WAVE_LENGTH 48
+#define NUM_SEGMENTS 9
+

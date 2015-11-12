@@ -5,9 +5,13 @@
 #include <signal.h>
 #include "TMath.h"
 #include "TFile.h"
+#include "TTree.h"
 #include "TH1F.h"
+#include "TH2F.h"
 #include "TStopwatch.h"
 #include "CommandLineInterface.hh"
+#include "Grape.hh"
+
 using namespace TMath;
 using namespace std;
 
@@ -45,22 +49,34 @@ int main(int argc, char* argv[]){
   }
   //open the input and the output files
   cout<<"input file: "<<InputFile<< endl;
-  FILE *infile = fopen(InputFile,"r");
-  
+  FILE *infile = fopen(InputFile,"r");  
   TFile *ofile = new TFile(RootFile,"RECREATE");
+  
+  //setup tree
+  TTree* tr = new TTree("gtr","GRAPE built events");
+  GrapeHit* gr = new GrapeHit;
+  tr->Branch("grape",&gr,320000);
+  tr->BranchRef();
 
   //test histograms
   TList* hlist = new TList;
   TH1F* hpha[2];
+  TH1F* hphan[2];
+  TH2F* hphas[2];
+  TH2F* hphasn[2];
   for(int i=0;i<2;i++){
     hpha[i] = new TH1F(Form("hpha_%d",i),Form("hpha_%d",i),8000,0,8000);hlist->Add(hpha[i]);
+    hphan[i] = new TH1F(Form("hphan_%d",i),Form("hphan_%d",i),8000,0,8000);hlist->Add(hphan[i]);
+    hphas[i] = new TH2F(Form("hphas_%d",i),Form("hphas_%d",i),10,0,10,4000,0,4000);hlist->Add(hphas[i]);
+    hphasn[i] = new TH2F(Form("hphasn_%d",i),Form("hphasn_%d",i),10,0,10,4000,0,4000);hlist->Add(hphasn[i]);
   }
 
   int buffers = 0;
   long long int bytes_read = 0;
   cout << "------------------------------------" << endl;
   while(!feof(infile) && !signal_received){
-
+    GrapeHit *hit = new GrapeHit();
+    
     //Finish reading if you have read as many buffers as the user has requested.
     if(LastBuffer > 0 && buffers >= LastBuffer)
       break;
@@ -69,10 +85,16 @@ int main(int argc, char* argv[]){
 
     //one word with trigger flag, board number (crystal A/B), detector number
     bsize = fread(buffer, sizeof(unsigned short), 1, infile);
+    if(bsize == 0)
+      break;
+
     int detID = (buffer[0]&0xff00)>>8;
     int trigg = (buffer[0]&0x0080)>>7;
     int board = (buffer[0]&0x0040)>>6;
-    if(Verbose>0){
+    hit->SetTrigFlag(trigg);
+    hit->SetDetNumber(detID);
+    hit->SetBoardNumber(board);
+    if(Verbose>1){
       cout << "header: " << buffer[0] <<"\t0x"<<(hex) <<buffer[0] << (dec) << endl;
       cout << "detID: " << detID;
       cout << "\ttrigg: " << trigg;
@@ -82,7 +104,13 @@ int main(int argc, char* argv[]){
 
     //one word with the time of the SUM signal leading edge
     bsize = fread(buffer, sizeof(unsigned short), 1, infile);
+    if(bsize == 0){
+      cout << "error; no data" << endl;
+      break;
+    }
     HEtoLE((char*)buffer,1);
+    hit->SetSumLET(buffer[0]);
+
     if(Verbose>0){
       cout << "LET: " << buffer[0] <<"\t0x"<<(hex) <<buffer[0] << (dec) << endl;
     }
@@ -99,8 +127,9 @@ int main(int argc, char* argv[]){
     long long int ts = (long long int)buffer[0]<<32;
     ts += (long long int)buffer[1]<<16;
     ts += (long long int)buffer[2];
-    if(Verbose>0){
-      cout << "ts " << ts <<"\t0x"<<(hex) << ts << (dec) << endl;
+    hit->SetSumTS(ts);
+    if(Verbose>1){
+      cout << "ts " << ts <<"\t0x"<<(hex) << ts << (dec) << "\t" << hit->GetSumTS() << endl;
     }
     bytes_read += 3*sizeof(unsigned short);
  
@@ -108,11 +137,12 @@ int main(int argc, char* argv[]){
     bsize = fread(buffer, sizeof(unsigned short), 1, infile);
     HEtoLE((char*)buffer,1);
     int pha = buffer[0];
+    hit->SetSumPHA(pha);
     if(Verbose>0){
       cout << "PHA " << pha <<"\t0x"<<(hex) << pha << (dec) << endl;
     }
     bytes_read += 1*sizeof(unsigned short);
-    hpha[board]->Fill(pha);
+
 
     //one word for each segment Abs count
     unsigned short int SAbscount[9];
@@ -126,9 +156,14 @@ int main(int argc, char* argv[]){
     HEtoLE((char*)Spha,9);
     if(Verbose>0){
       for(int i=0;i<9;i++)
-	cout <<i<< "\tAbs " << SAbscount[i] <<"\t0x"<<(hex) <<SAbscount[i]  << (dec) << "\tPHA " << Spha[i] <<"\t0x"<<(hex) <<Spha[i]  << (dec) << endl;
+	if(Spha[i]>0)
+	  cout <<i<< "\tAbs " << SAbscount[i] <<"\t0x"<<(hex) <<SAbscount[i]  << (dec) << "\tPHA " << Spha[i] <<"\t0x"<<(hex) <<Spha[i]  << (dec) << endl;
     }
     bytes_read += 9*sizeof(unsigned short);
+
+    vector<GrapeSeg> segments;
+    segments.clear();
+    segments.resize(NUM_SEGMENTS);
 
     //48 words for each segments containing the wave
     unsigned short int Swave[9][48];
@@ -136,6 +171,12 @@ int main(int argc, char* argv[]){
       bsize = fread(Swave[i], sizeof(unsigned short), 48, infile);
       HEtoLE((char*)Swave[i],9);
       bytes_read += 48*sizeof(unsigned short);
+      segments[i].SetSegNumber(i);
+      segments[i].SetSegTS(SAbscount[i]);
+      segments[i].SetSegPHA(Spha[i]);
+      segments[i].SetSegWave(vector<unsigned short>(Swave[i], Swave[i] + sizeof Swave[i] / sizeof Swave[i][0]));
+      
+      hit->AddSegment(segments[i]);
     }
     
     //48 words for SUM containing the wave
@@ -143,7 +184,16 @@ int main(int argc, char* argv[]){
     bsize = fread(wave, sizeof(unsigned short), 48, infile);
     HEtoLE((char*)wave,9);
     bytes_read += 48*sizeof(unsigned short);
-    
+    bool foundwave = false;
+    for(int i=0;i<48;i++){
+      if(Verbose>2)
+	cout << i << "\t" << wave[i] << endl;
+      if(wave[i]>0){
+	foundwave = true;
+      }
+      hit->SetSumWave(i,wave[i]);
+    }
+
     //eight words dummy
     bsize = fread(buffer, sizeof(unsigned short), 8, infile);
     HEtoLE((char*)buffer,8);
@@ -152,11 +202,32 @@ int main(int argc, char* argv[]){
 	cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
     }
     bytes_read += 8*sizeof(unsigned short);
-
     if(Verbose>0)
       cout << "bytes_read: " << bytes_read << endl;
 
+    //some diagnostics histograms, to be removed
+    if(foundwave){
+      hpha[board]->Fill(pha);
+      for(int i=0;i<9;i++){
+	if(Spha[i]>0)
+	  hphas[board]->Fill(i,Spha[i]);
+      }
+    }
+    else{
+      hphan[board]->Fill(pha);
+      for(int i=0;i<9;i++){
+	if(Spha[i]>0)
+	  hphasn[board]->Fill(i,Spha[i]);
+      }
+    }
+
+
+
     buffers++;
+    if(foundwave){
+      gr = hit;
+      tr->Fill();
+    }
     if(buffers % 1000 == 0){
       double time_end = get_time();
       cout << "\r" << buffers << " buffers read... "<<bytes_read/(1024*1024)<<" MB... "<<buffers/(time_end - time_start) << " buffers/s" << flush;
@@ -164,10 +235,13 @@ int main(int argc, char* argv[]){
     if(Verbose>0)
       cout << "------------------------------------" << endl;
   }
+  cout << endl;
   cout << "------------------------------------" << endl;
   cout << "Total of " << buffers << " data buffers ("<<bytes_read/(1024*1024)<<" MB) read." << endl;
+  cout << tr->GetEntries() << " entries written to tree ("<<tr->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
   ofile->cd();
   hlist->Write();
+  tr->Write();
   ofile->Close();
   double time_end = get_time();
   cout << "Program Run time " << time_end - time_start << " s." << endl;

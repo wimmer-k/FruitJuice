@@ -17,30 +17,35 @@ CFLAGS		= -pedantic -Wall -Wno-long-long -g -O3 $(ROOTCFLAGS) -fPIC
 
 INCLUDES        = -I./inc -I$(COMMON_DIR)
 BASELIBS 	= -lm $(ROOTLIBS) $(ROOTGLIBS) -L$(LIB_DIR) -lSpectrum
-ALLIBS  	=  $(BASELIBS) -lCommandLineInterface 
+ALLIBS  	=  $(BASELIBS) -lCommandLineInterface -lGrape
 LIBS 		= $(ALLIBS)
 LFLAGS		= -g -fPIC
 
+#O_FILES = build/Grape.o
+LIB_O_FILES = build/Grape.o build/GrapeDictionary.o 
 
-#Fruit:	build/%.o
-Fruit:	Fruit.cc
+Fruit:	Fruit.cc $(LIB_DIR)/libGrape.so 
 	@echo "Compiling $@"
 	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) -o $(BIN_DIR)/$@ 
 
-build/%.o: %.cc
+$(LIB_DIR)/libGrape.so: $(LIB_O_FILES) 
+	@echo "Making $@"
+	@$(CPP) -g -fPIC -shared -o $@ $^ -lc
+
+build/%.o: src/%.cc inc/%.hh
 	@echo "Compiling $@"
 	@mkdir -p $(dir $@)
-	@$(CPP) -fPIC -c $< -o $@ $(CFLAGS)
+	@$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@ 
 
-#build/Dictionary.o: build/Dictionary.cc
-#	@echo "Compiling $@"
-#	@mkdir -p $(dir $@)
-#	@$(CPP) -fPIC -c $< -o $@ $(CFLAGS)
-#
-#build/Dictionary.cc: $(wildcard include/*.hh) include/LinkDef.h
-#	@echo "Building $@"
-#	@mkdir -p build
-#	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(notdir $^)
+build/GrapeDictionary.o: build/GrapeDictionary.cc
+	@echo "Compiling $@"
+	@mkdir -p $(dir $@)
+	@$(CPP) $(INCLUDES) -fPIC -c $< -o $@ $(CFLAGS)
+
+build/GrapeDictionary.cc: inc/Grape.hh inc/GrapeLinkDef.h
+	@echo "Building $@"
+	@mkdir -p build
+	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(notdir $^)
 
 clean:
 	@echo "Cleaning up"
