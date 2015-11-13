@@ -29,12 +29,15 @@ int main(int argc, char* argv[]){
   int Verbose =0;
   char *InputFile = NULL;
   char *RootFile = NULL;
+  bool WriteTree = true;
+
   //Read in the command line arguments
   CommandLineInterface* interface = new CommandLineInterface();
   interface->Add("-lb", "last buffer to be read", &LastBuffer);  
   interface->Add("-i", "input file", &InputFile);  
   interface->Add("-o", "output file", &RootFile);    
   interface->Add("-v", "verbose level", &Verbose);  
+  interface->Add("-wt", "write the tree", &WriteTree);  
   interface->CheckFlags(argc, argv);
 
   //Complain about missing mandatory arguments
@@ -70,9 +73,14 @@ int main(int argc, char* argv[]){
     hphas[i] = new TH2F(Form("hphas_%d",i),Form("hphas_%d",i),10,0,10,4000,0,4000);hlist->Add(hphas[i]);
     hphasn[i] = new TH2F(Form("hphasn_%d",i),Form("hphasn_%d",i),10,0,10,4000,0,4000);hlist->Add(hphasn[i]);
   }
-
+  TH1F* htdiff[3];
+  for(int i=0;i<3;i++){
+    htdiff[i] = new TH1F(Form("htdiff_%d",i),Form("htdiff_%d",i),9000,-100000,800000);hlist->Add(htdiff[i]);
+  }
+  
   int buffers = 0;
   long long int bytes_read = 0;
+  long long int previousts[3] ={0,0,0};
   cout << "------------------------------------" << endl;
   while(!feof(infile) && !signal_received){
     GrapeHit *hit = new GrapeHit();
@@ -108,7 +116,7 @@ int main(int argc, char* argv[]){
       cout << "error; no data" << endl;
       break;
     }
-    HEtoLE((char*)buffer,1);
+    HEtoLE((char*)buffer,2);
     hit->SetSumLET(buffer[0]);
 
     if(Verbose>0){
@@ -118,7 +126,12 @@ int main(int argc, char* argv[]){
 
     //three words containing the timestamp (SUM Abs count)
     bsize = fread(buffer, sizeof(unsigned short), 3, infile);
-    HEtoLE((char*)buffer,3);
+    if(Verbose>3){
+      cout << "TS0: " << buffer[0] <<"\t0x"<<(hex) <<buffer[0] << (dec) << endl;
+      cout << "TS1: " << buffer[1] <<"\t0x"<<(hex) <<buffer[1] << (dec) << endl;
+      cout << "TS2: " << buffer[2] <<"\t0x"<<(hex) <<buffer[2] << (dec) << endl;
+    }
+    HEtoLE((char*)buffer,6);
     if(Verbose>2){
       cout << "TS0: " << buffer[0] <<"\t0x"<<(hex) <<buffer[0] << (dec) << endl;
       cout << "TS1: " << buffer[1] <<"\t0x"<<(hex) <<buffer[1] << (dec) << endl;
@@ -129,13 +142,13 @@ int main(int argc, char* argv[]){
     ts += (long long int)buffer[2];
     hit->SetSumTS(ts);
     if(Verbose>1){
-      cout << "ts " << ts <<"\t0x"<<(hex) << ts << (dec) << "\t" << hit->GetSumTS() << endl;
+      cout << "ts " << ts <<"\t0x"<<(hex) << ts << (dec) << "\t" << hit->GetSumTS() << "\t\t";
     }
     bytes_read += 3*sizeof(unsigned short);
  
     //one word containing the pulse height information
     bsize = fread(buffer, sizeof(unsigned short), 1, infile);
-    HEtoLE((char*)buffer,1);
+    HEtoLE((char*)buffer,2);
     int pha = buffer[0];
     hit->SetSumPHA(pha);
     if(Verbose>0){
@@ -147,13 +160,13 @@ int main(int argc, char* argv[]){
     //one word for each segment Abs count
     unsigned short int SAbscount[9];
     bsize = fread(SAbscount, sizeof(unsigned short), 9, infile);
-    HEtoLE((char*)SAbscount,9);
+    HEtoLE((char*)SAbscount,18);
     bytes_read += 9*sizeof(unsigned short);
 
     //one word for each segment pulse height
     unsigned short int Spha[9];
     bsize = fread(Spha, sizeof(unsigned short), 9, infile);
-    HEtoLE((char*)Spha,9);
+    HEtoLE((char*)Spha,18);
     if(Verbose>0){
       for(int i=0;i<9;i++)
 	if(Spha[i]>0)
@@ -169,7 +182,7 @@ int main(int argc, char* argv[]){
     unsigned short int Swave[9][48];
     for(int i=0;i<9;i++){
       bsize = fread(Swave[i], sizeof(unsigned short), 48, infile);
-      HEtoLE((char*)Swave[i],9);
+      HEtoLE((char*)Swave[i],96);
       bytes_read += 48*sizeof(unsigned short);
       segments[i].SetSegNumber(i);
       segments[i].SetSegTS(SAbscount[i]);
@@ -182,7 +195,7 @@ int main(int argc, char* argv[]){
     //48 words for SUM containing the wave
     unsigned short int wave[48];
     bsize = fread(wave, sizeof(unsigned short), 48, infile);
-    HEtoLE((char*)wave,9);
+    HEtoLE((char*)wave,96);
     bytes_read += 48*sizeof(unsigned short);
     bool foundwave = false;
     for(int i=0;i<48;i++){
@@ -196,7 +209,7 @@ int main(int argc, char* argv[]){
 
     //eight words dummy
     bsize = fread(buffer, sizeof(unsigned short), 8, infile);
-    HEtoLE((char*)buffer,8);
+    HEtoLE((char*)buffer,16);
     if(Verbose>0){
       for(int i=0;i<8;i++)
 	cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
@@ -220,13 +233,25 @@ int main(int argc, char* argv[]){
 	  hphasn[board]->Fill(i,Spha[i]);
       }
     }
-
-
-
+    if(foundwave){
+      if(board==0&&previousts[1]>0){
+	htdiff[board]->Fill(ts-previousts[1]);
+      }
+      if(board==1&&previousts[0]>0){
+	htdiff[board]->Fill(ts-previousts[0]);
+      }
+      if(previousts[2]>0){
+	htdiff[2]->Fill(ts-previousts[2]);
+      }
+    }
+    
     buffers++;
     if(foundwave){
+      previousts[board] = ts;
+      previousts[2] = ts;
       gr = hit;
-      tr->Fill();
+      if(WriteTree)
+	tr->Fill();
     }
     if(buffers % 1000 == 0){
       double time_end = get_time();
@@ -241,7 +266,8 @@ int main(int argc, char* argv[]){
   cout << tr->GetEntries() << " entries written to tree ("<<tr->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
   ofile->cd();
   hlist->Write();
-  tr->Write();
+  if(WriteTree)
+    tr->Write();
   ofile->Close();
   double time_end = get_time();
   cout << "Program Run time " << time_end - time_start << " s." << endl;
