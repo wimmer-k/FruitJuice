@@ -10,7 +10,7 @@
 #include "TH2F.h"
 #include "TStopwatch.h"
 #include "CommandLineInterface.hh"
-#include "Grape.hh"
+#include "BuildEvents.hh"
 
 using namespace TMath;
 using namespace std;
@@ -18,8 +18,6 @@ using namespace std;
 bool signal_received = false;
 void signalhandler(int sig);
 double get_time();
-void swapbytes(char* a, char *b);
-void  HEtoLE(char* cBuf, int bytes);
 int main(int argc, char* argv[]){
   double time_start = get_time();  
   TStopwatch timer;
@@ -27,22 +25,22 @@ int main(int argc, char* argv[]){
   signal(SIGINT,signalhandler);
   int LastBuffer =-1;
   int Verbose =0;
-  char *InputFile = NULL;
+  char *SetFile = NULL;
   char *RootFile = NULL;
-  bool WriteTree = true;
+  int WriteTree = 1;
 
   //Read in the command line arguments
   CommandLineInterface* interface = new CommandLineInterface();
   interface->Add("-lb", "last buffer to be read", &LastBuffer);  
-  interface->Add("-i", "input file", &InputFile);  
+  interface->Add("-s", "settings file", &SetFile);  
   interface->Add("-o", "output file", &RootFile);    
   interface->Add("-v", "verbose level", &Verbose);  
   interface->Add("-wt", "write the tree", &WriteTree);  
   interface->CheckFlags(argc, argv);
 
   //Complain about missing mandatory arguments
-  if(InputFile == NULL){
-    cout << "No input file given " << endl;
+  if(SetFile == NULL){
+    cout << "No settings file given " << endl;
     return 1;
   }
   if(RootFile == NULL){
@@ -50,16 +48,15 @@ int main(int argc, char* argv[]){
     RootFile = (char*)"test.root";
     //return 2;
   }
-  //open the input and the output files
-  cout<<"input file: "<<InputFile<< endl;
-  FILE *infile = fopen(InputFile,"r");  
+  //open the output files
   TFile *ofile = new TFile(RootFile,"RECREATE");
   
-  //setup tree
-  TTree* tr = new TTree("gtr","GRAPE built events");
-  GrapeHit* gr = new GrapeHit;
-  tr->Branch("grape",&gr,320000);
-  tr->BranchRef();
+  BuildEvents *evt = new BuildEvents();
+  evt->SetVL(Verbose);
+  if(!evt->Init(SetFile)){
+    cerr << "Initialization failed! Check settings file!" << endl;
+    return 99;
+  }
 
   //test histograms
   TList* hlist = new TList;
@@ -80,8 +77,23 @@ int main(int argc, char* argv[]){
   
   int buffers = 0;
   long long int bytes_read = 0;
-  long long int previousts[3] ={0,0,0};
+  //long long int previousts[3] ={0,0,0};
   cout << "------------------------------------" << endl;
+  
+  bytes_read += evt->ReadEachFile();
+  buffers = evt->GetNBuffers();
+  evt->SortHits();
+  evt->ProcessHits();
+  evt->CloseEvent();
+  evt->ReadNewFiles();
+  evt->SortHits();
+  evt->ProcessHits();
+  evt->CloseEvent();
+  evt->ReadNewFiles();
+  evt->SortHits();
+
+  //evt->Run(LastBuffer);
+  /*
   while(!feof(infile) && !signal_received){
     GrapeHit *hit = new GrapeHit();
     
@@ -124,7 +136,7 @@ int main(int argc, char* argv[]){
     }
     bytes_read += 1*sizeof(unsigned short);
 
-    //three words containing the timestamp (SUM Abs count)
+    //three words containing the time-stamp (SUM Abs count)
     bsize = fread(buffer, sizeof(unsigned short), 3, infile);
     if(Verbose>3){
       cout << "TS0: " << buffer[0] <<"\t0x"<<(hex) <<buffer[0] << (dec) << endl;
@@ -219,40 +231,46 @@ int main(int argc, char* argv[]){
       cout << "bytes_read: " << bytes_read << endl;
 
     //some diagnostics histograms, to be removed
+    // if(foundwave){
+    //   hpha[board]->Fill(pha);
+    //   for(int i=0;i<9;i++){
+    // 	if(Spha[i]>0)
+    // 	  hphas[board]->Fill(i,Spha[i]);
+    //   }
+    // }
+    // else{
+    //   hphan[board]->Fill(pha);
+    //   for(int i=0;i<9;i++){
+    // 	if(Spha[i]>0)
+    // 	  hphasn[board]->Fill(i,Spha[i]);
+    //   }
+    // }
+    // if(foundwave){
+    //   if(board==0&&previousts[1]>0){
+    // 	htdiff[board]->Fill(ts-previousts[1]);
+    //   }
+    //   if(board==1&&previousts[0]>0){
+    // 	htdiff[board]->Fill(ts-previousts[0]);
+    //   }
+    //   if(previousts[2]>0){
+    // 	htdiff[2]->Fill(ts-previousts[2]);
+    //   }
+    // }
+    cout << "detID: " << detID;
+    cout << "\tBN: " << board;
+    cout << "\tTS: " << ts;
+    cout << "\tPHA: "<< pha << endl;
     if(foundwave){
-      hpha[board]->Fill(pha);
-      for(int i=0;i<9;i++){
-	if(Spha[i]>0)
-	  hphas[board]->Fill(i,Spha[i]);
-      }
-    }
-    else{
-      hphan[board]->Fill(pha);
-      for(int i=0;i<9;i++){
-	if(Spha[i]>0)
-	  hphasn[board]->Fill(i,Spha[i]);
-      }
-    }
-    if(foundwave){
-      if(board==0&&previousts[1]>0){
-	htdiff[board]->Fill(ts-previousts[1]);
-      }
-      if(board==1&&previousts[0]>0){
-	htdiff[board]->Fill(ts-previousts[0]);
-      }
-      if(previousts[2]>0){
-	htdiff[2]->Fill(ts-previousts[2]);
-      }
-    }
-    
+      cout << "found a wave" << endl;
+    }    
     buffers++;
-    if(foundwave){
-      previousts[board] = ts;
-      previousts[2] = ts;
-      gr = hit;
-      if(WriteTree)
-	tr->Fill();
-    }
+    // if(foundwave){
+    //   previousts[board] = ts;
+    //   previousts[2] = ts;
+    //   gr = hit;
+    //   if(WriteTree)
+    // 	tr->Fill();
+    // }
     if(buffers % 1000 == 0){
       double time_end = get_time();
       cout << "\r" << buffers << " buffers read... "<<bytes_read/(1024*1024)<<" MB... "<<buffers/(time_end - time_start) << " buffers/s" << flush;
@@ -260,14 +278,15 @@ int main(int argc, char* argv[]){
     if(Verbose>0)
       cout << "------------------------------------" << endl;
   }
+  */
   cout << endl;
   cout << "------------------------------------" << endl;
   cout << "Total of " << buffers << " data buffers ("<<bytes_read/(1024*1024)<<" MB) read." << endl;
-  cout << tr->GetEntries() << " entries written to tree ("<<tr->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
+  cout << evt->GetTree()->GetEntries() << " entries written to tree ("<<evt->GetTree()->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
   ofile->cd();
   hlist->Write();
   if(WriteTree)
-    tr->Write();
+    evt->GetTree()->Write();
   ofile->Close();
   double time_end = get_time();
   cout << "Program Run time " << time_end - time_start << " s." << endl;
@@ -289,14 +308,3 @@ double get_time(){
     double d = t.tv_sec + (double) t.tv_usec/1000000;  
     return d;  
 }  
-void swapbytes(char* a, char *b){
-  char tmp=*a;
-  *a=*b;
-  *b=tmp;
-}
-
-// Mode 3 data is high endian format
-void  HEtoLE(char* cBuf, int bytes){
-  for(int i=0; i<bytes; i+=2)
-    swapbytes((cBuf+i), (cBuf+i+1));
-}

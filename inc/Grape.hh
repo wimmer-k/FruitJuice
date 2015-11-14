@@ -9,11 +9,11 @@
 #include "Grapedefs.h"
 
 using namespace std;
-class GrapeSeg : public TObject{
+class GrapeSeg : public TObject {
 public:
   GrapeSeg(){
     Clear();
-  };
+  }
   void Clear(){
     fSegNumber = sqrt(-1);
     fSegTS = sqrt(-1);
@@ -40,17 +40,22 @@ protected:
   //! Pulse height amplitude of the SEG signal
   unsigned short fSegPHA;
   //! Waveform of the SEG signal
-  vector <unsigned short int> fSegWave;
+#ifdef WRITE_WAVE
+  vector <unsigned short> fSegWave;
+#else
+  vector <unsigned short> fSegWave; //!
+#endif
   ClassDef(GrapeSeg,1);
 };
 
 
-class GrapeHit : public TObject{
+class GrapeHit : public TObject {
 public:
   GrapeHit(){
     Clear();
-  };
+  }
   void Clear(){
+    fFileNumber = -1;
     fTrigFlag = sqrt(-1);
     fBoardNumber = sqrt(-1);
     fDetNumber = sqrt(-1);
@@ -62,6 +67,7 @@ public:
     fSegments.clear();
     fSegMult = 0;
   }
+  void SetFileNumber(short filenumber){fFileNumber = filenumber;}
   void SetTrigFlag(unsigned short trigflag){fTrigFlag = trigflag;}
   void SetBoardNumber(unsigned short boardnumber){fBoardNumber = boardnumber;}
   void SetDetNumber(unsigned short detnumber){fDetNumber = detnumber;}
@@ -71,6 +77,7 @@ public:
   void SetSumWave(unsigned short n, unsigned short sumWave){fSumWave[n] = sumWave;}
   void SetSumWave(vector<unsigned short> sumWave){fSumWave = sumWave;}
   
+  //! Adds one segment, if the pulse height of the segment is >0 the multiplicity is increased
   void AddSegment(GrapeSeg add){
     if(fSegments.size()>NUM_SEGMENTS){
       cout << "adding segment mult > " << NUM_SEGMENTS << endl;
@@ -81,19 +88,42 @@ public:
       fSegMult++;
     }
   }
-
+  short GetFileNumber(){return fFileNumber;}
   unsigned short GetTrigFlag(){return fTrigFlag;}
   unsigned short GetBoardNumber(){return fBoardNumber;}
   unsigned short GetDetNumber(){return fDetNumber;}
   unsigned short GetSumLET(){return fSumLET;}
   long long int GetSumTS(){return fSumTS;}
   unsigned short GetSumPHA(){return fSumPHA;}
-  vector <unsigned short> GetWave(){return fSumWave;}
+  vector <unsigned short> GetSumWave(){return fSumWave;}
   GrapeSeg* GetSegment(int n){return &fSegments[n];}
   vector<GrapeSeg>* GetSegments(){return &fSegments;}
   unsigned short GetSegMult(){return fSegMult;}
+  
+  bool HasSumWave(){
+    for(unsigned short i=0;i<fSumWave.size();i++){
+      if(fSumWave.at(i)>0){
+	return true;
+      }
+    }
+    return false;
+  }
+
+  void Print(){
+    cout << "detID: " << fDetNumber;
+    cout << "\tBN: " << fBoardNumber;
+    cout << "\tTS: " << fSumTS;
+    cout << "\tPHA: "<< fSumPHA;
+    if(HasSumWave())
+      cout << "\tWAVE: Y";
+    else 
+      cout << "\tWAVE: N";
+    cout << "\t#Seg: "<< fSegMult << endl;
+  }
 
 protected:
+  //! From which file was the hit read. (redundant should be equialent to the detector number fDetNumber)
+  short fFileNumber; //!
   //! Flag specifying external/internal trigger
   unsigned short fTrigFlag;
   //! Board number, or crystal number of one module, 0: detector A, 1: detector B
@@ -107,12 +137,47 @@ protected:
   //! Pulse height amplitude of the SUM signal
   unsigned short fSumPHA;
   //! Waveform of the SUM signal
+#ifdef WRITE_WAVE
   vector <unsigned short> fSumWave;
+#else
+  vector <unsigned short> fSumWave; //!
+#endif
   //! a vector containing the segment information
   vector <GrapeSeg> fSegments;
   //! multiplicity of segments with net charge
   unsigned short fSegMult;
   ClassDef(GrapeHit,1);
+};
+
+class GrapeEvent : public TObject {
+public:
+  GrapeEvent(){
+    Clear();
+  };
+  void Clear(){
+    fMult = 0;
+    fHits.clear();
+  }
+  unsigned short GetMult(){return fMult;}
+  GrapeHit* GetHit(unsigned short i){return fHits.at(i);}
+  void Add(GrapeHit* add){
+    fHits.push_back(add);
+    fMult++;
+  }
+protected:
+  //! a vector containing the hits which belong to the event
+  vector <GrapeHit*> fHits;
+  //! multiplicity of hits in the event
+  unsigned short fMult;
+  ClassDef(GrapeEvent,1);
+};
+
+//! compares time-stamps of the hits
+class HitComparer {
+public:
+  bool operator() ( GrapeHit *lhs, GrapeHit *rhs) {
+    return (*lhs).GetSumTS() < (*rhs).GetSumTS();
+  }
 };
 
 #endif

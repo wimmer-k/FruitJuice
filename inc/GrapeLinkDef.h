@@ -4,4 +4,5 @@
 #pragma link off all functions;
 #pragma link C++ class GrapeHit+;
 #pragma link C++ class GrapeSeg+;
+#pragma link C++ class GrapeEvent+;
 #endif

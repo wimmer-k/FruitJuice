@@ -19,18 +19,29 @@ INCLUDES        = -I./inc -I$(COMMON_DIR)
 BASELIBS 	= -lm $(ROOTLIBS) $(ROOTGLIBS) -L$(LIB_DIR) -lSpectrum
 ALLIBS  	=  $(BASELIBS) -lCommandLineInterface -lGrape
 LIBS 		= $(ALLIBS)
-LFLAGS		= -g -fPIC
+LFLAGS		= -g -fPIC -shared
 
-#O_FILES = build/Grape.o
+SWITCH = -UWRITE_WAVE
+CFLAGS += $(SWITCH)
+LFLAGS += $(SWITCH)
+CFLAGS += -Wl,--no-as-needed
+LFLAGS += -Wl,--no-as-needed
+
+O_FILES = build/BuildEvents.o
 LIB_O_FILES = build/Grape.o build/GrapeDictionary.o 
 
-Fruit:	Fruit.cc $(LIB_DIR)/libGrape.so 
+Fruit:	Fruit.cc $(LIB_DIR)/libGrape.so $(O_FILES) 
 	@echo "Compiling $@"
-	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) -o $(BIN_DIR)/$@ 
+	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) $(O_FILES) -o $(BIN_DIR)/$@ 
 
 $(LIB_DIR)/libGrape.so: $(LIB_O_FILES) 
 	@echo "Making $@"
-	@$(CPP) -g -fPIC -shared -o $@ $^ -lc
+	@$(CPP) $(LFLAGS) -o $@ $^ -lc
+
+build/BuildEvents.o: src/BuildEvents.cc inc/BuildEvents.hh $(LIB_DIR)/libGrape.so 
+	@echo "Compiling $@"
+	@mkdir -p $(dir $@)
+	@$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@ 
 
 build/%.o: src/%.cc inc/%.hh
 	@echo "Compiling $@"
@@ -40,13 +51,14 @@ build/%.o: src/%.cc inc/%.hh
 build/GrapeDictionary.o: build/GrapeDictionary.cc
 	@echo "Compiling $@"
 	@mkdir -p $(dir $@)
-	@$(CPP) $(INCLUDES) -fPIC -c $< -o $@ $(CFLAGS)
+	@$(CPP) $(CFLAGS) $(INCLUDES) -fPIC -c $< -o $@
 
 build/GrapeDictionary.cc: inc/Grape.hh inc/GrapeLinkDef.h
 	@echo "Building $@"
 	@mkdir -p build
-	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(notdir $^)
+	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(SWITCH) $(notdir $^)
 
 clean:
 	@echo "Cleaning up"
 	@rm -rf build
+	@rm inc/*~ src/*~
