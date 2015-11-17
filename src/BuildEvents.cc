@@ -114,8 +114,6 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
   for(set<unsigned short>::iterator remo= fRemoved.begin();remo !=fRemoved.end();++remo){
     bool found = false;
     for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
-      cout << "previously removed " << *remo << " in memory " << *read << endl;
-      
       if(*remo == *read){
 	if(fVerboseLevel>0)
 	  cout << "file " << *remo << " is already there and will be removed"<< endl;
