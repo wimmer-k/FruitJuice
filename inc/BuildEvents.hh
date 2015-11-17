@@ -28,7 +28,7 @@ public:
   //! Read and unpack two blocks from each detector file
   long long int ReadEachFile();
   //! Read and unpack two blocks from detectors that have been previously added to the event
-  long long int ReadNewFiles();
+  pair<long long int,bool> ReadNewFiles();
   //! Unpack one detector, read and unpack from one file
   long long int Unpack(unsigned short det);
   //! Unpack one crystal, create a hit, add it to the storage vector
@@ -43,6 +43,8 @@ public:
   TTree* GetTree(){return fTree;}
   //! Returns the number of buffers read
   unsigned int GetNBuffers(){return fNbuffers;}
+  //! Get the size of the vector of stored hits
+  unsigned short GetHitsLeft(){return fHits.size();}
   
   //! dummy method to be delete
   void Run(int last);
@@ -71,6 +73,8 @@ protected:
   unsigned int fEventWindow;
   //! which detectors have been removed from the vector, a set will be unique 
   set<unsigned short> fRemoved;
+  //! which files are already read and in memory
+  vector<unsigned short> fRead;
 
   //! The built event, 
   GrapeEvent *fEvent;

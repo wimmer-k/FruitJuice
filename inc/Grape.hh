@@ -24,7 +24,7 @@ public:
   void SetSegNumber(unsigned short segnumber){fSegNumber = segnumber;}
   void SetSegTS(unsigned short segTS){fSegTS = segTS;}
   void SetSegPHA(unsigned short segPHA){fSegPHA = segPHA;}
-  void SetSegWave(unsigned short n, unsigned short segWave){fSegWave[n] = segWave;}
+  void SetSegWave(unsigned short n, unsigned short segWave){fSegWave.at(n) = segWave;}
   void SetSegWave(vector<unsigned short> segWave){fSegWave = segWave;}
 
   unsigned short GetSegNumber(){return fSegNumber;}
@@ -74,7 +74,7 @@ public:
   void SetSumLET(unsigned short sumLET){fSumLET = sumLET;}
   void SetSumTS(long long int sumTS){fSumTS = sumTS;}
   void SetSumPHA(unsigned short sumPHA){fSumPHA = sumPHA;}
-  void SetSumWave(unsigned short n, unsigned short sumWave){fSumWave[n] = sumWave;}
+  void SetSumWave(unsigned short n, unsigned short sumWave){fSumWave.at(n) = sumWave;}
   void SetSumWave(vector<unsigned short> sumWave){fSumWave = sumWave;}
   
   //! Adds one segment, if the pulse height of the segment is >0 the multiplicity is increased
@@ -96,7 +96,7 @@ public:
   long long int GetSumTS(){return fSumTS;}
   unsigned short GetSumPHA(){return fSumPHA;}
   vector <unsigned short> GetSumWave(){return fSumWave;}
-  GrapeSeg* GetSegment(int n){return &fSegments[n];}
+  GrapeSeg* GetSegment(int n){return &fSegments.at(n);}
   vector<GrapeSeg>* GetSegments(){return &fSegments;}
   unsigned short GetSegMult(){return fSegMult;}
   
@@ -163,6 +163,10 @@ public:
   void Add(GrapeHit* add){
     fHits.push_back(add);
     fMult++;
+  }
+  void Print(){
+    for(unsigned short i=0;i<fHits.size();i++)
+      fHits.at(i)->Print();
   }
 protected:
   //! a vector containing the hits which belong to the event

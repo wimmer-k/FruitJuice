@@ -16,17 +16,25 @@ void ViewWave(int n){
   pad[1]->Draw();
   TFile *f = new TFile("/mnt/raid/OEDO/GRAPE/test.root");
   TTree* tr = (TTree*)f->Get("gtr");
-  GrapeHit* gr = new GrapeHit;
-  tr->SetBranchAddress("grape",&gr);
+  GrapeEvent* gre = new GrapeEvent;
+  tr->SetBranchAddress("grape",&gre);
   Int_t status = tr->GetEvent(n);
   int data[WAVE_LENGTH];
   int x[WAVE_LENGTH];
   vector<TGraph*> g;
   g.resize(10);
+  if(gre->GetMult()==0){
+    cout << "mult = 0 event, strange!" << endl;
+    return;
+  }
+  if(gre->GetMult()==2){
+    cout << "mult = 2 event, taking first hit only!" << endl;
+  }
+  GrapeHit* gr = gre->GetHit(0);
   cout << gr->GetSumPHA() << endl;
   for(int i=0;i<WAVE_LENGTH;i++){
     x[i] = i;
-    data[i] = (int)gr->GetWave()[i];
+    data[i] = (int)gr->GetSumWave()[i];
     //cout << x[i] << "\t" << data[i] << endl;
   }
   pad[0]->cd();

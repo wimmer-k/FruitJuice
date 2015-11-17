@@ -57,6 +57,7 @@ bool BuildEvents::Init(char *settings){
 
   fNbuffers = 0;
   fNhits = 0;
+  fRead.clear();
 
   return true;
 }
@@ -70,31 +71,101 @@ void BuildEvents::Run(int last){
 long long int BuildEvents::ReadEachFile(){
   long long int bytes_read = 0;
   for(unsigned short i=0; i<fNdet; i++){
-    cout << "reading from file " << i<< endl;
+    if(fVerboseLevel>2)
+      cout << "reading from file " << i<< endl;
     bytes_read += Unpack(i);
   }
   return bytes_read;
 }
-long long int BuildEvents::ReadNewFiles(){
+pair<long long int,bool> BuildEvents::ReadNewFiles(){
+  if(fVerboseLevel>0)
+    cout <<__PRETTY_FUNCTION__ << endl;
+
+  //returns the number of bytes read, and if sucessfull.
+  //it can happen that nothing is read, but there was also no attempt to read, therefore the bool is needed as well;
+  std::pair <long long int, bool> returnvalue;
+  returnvalue.second = true;
+
   long long int bytes_read = 0;
-  for(set<unsigned short>::iterator iter= fRemoved.begin();iter !=fRemoved.end();++iter){
-    cout << "reading from file " << *iter<< endl;
-    bytes_read += Unpack(*iter);
+  if(fVerboseLevel>0){
+    cout << "currently read in memory: "; 
+    for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
+      cout << *read << " ";
+    }
+    cout <<  endl;
   }
-  return bytes_read;
+  if(fVerboseLevel>0){
+    cout << "I want to read from files: "; 
+    for(set<unsigned short>::iterator remo= fRemoved.begin();remo !=fRemoved.end();++remo){
+      cout << *remo << " ";
+    }
+    cout <<  endl;
+  }
+
+  if(fRead.size()==0 && fHits.size()==0){
+    returnvalue.first = ReadEachFile();
+    if(returnvalue.first<1){
+      returnvalue.second = false;
+    }
+    return returnvalue;
+  }
+  
+  bool triedtoread = false;
+  for(set<unsigned short>::iterator remo= fRemoved.begin();remo !=fRemoved.end();++remo){
+    bool found = false;
+    for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
+      cout << "previously removed " << *remo << " in memory " << *read << endl;
+      
+      if(*remo == *read){
+	if(fVerboseLevel>0)
+	  cout << "file " << *remo << " is already there and will be removed"<< endl;
+	fRead.erase(read);
+	found = true;
+	break;
+      }
+    }
+    if(!found){
+      if(fVerboseLevel>0)
+	cout << "reading from file " << *remo<< endl;
+      triedtoread = true;
+      bytes_read += Unpack(*remo);
+    }
+  }
+  if(fVerboseLevel>0){
+    cout << "after reading new files read in memory: "; 
+    for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
+      cout << *read << " ";
+    }
+    cout <<  endl;
+  }
+
+  returnvalue.first = bytes_read;
+  if(returnvalue.first<1 && triedtoread){
+    returnvalue.second = false;
+  }
+  // cout << "returning " << returnvalue.first << " and ";
+  // if(returnvalue.second)
+  //   cout << "TRUE " << endl;
+  // if(!returnvalue.second)
+  //   cout << "FALSE " << endl;
+  return returnvalue;
 }
 
 void BuildEvents::SortHits(){
+  if(fVerboseLevel>0)
+    cout <<__PRETTY_FUNCTION__ << endl;
   sort(fHits.begin(), fHits.end(), HitComparer());
-  if(fVerboseLevel>-1){
+  if(fVerboseLevel>0){
     cout << "sorted" << endl;
     for(unsigned short i=0;i<fHits.size();i++)
       fHits.at(i)->Print();
   }
 }
 void BuildEvents::ProcessHits(){
-  cout << "before fHits.size() = " << fHits.size() << endl;
-  
+  if(fVerboseLevel>0)
+    cout << __PRETTY_FUNCTION__ << "before fHits.size() = " << fHits.size() << endl;
+  if(fHits.size()==0)
+    return;
   fRemoved.clear();
   //first hit always good:
   fEvent->Add(fHits.at(0));
@@ -118,7 +189,7 @@ void BuildEvents::ProcessHits(){
     else
       break;
   }
-  if(fVerboseLevel>-1){
+  if(fVerboseLevel>0){
     cout << "after fHits.size() = " << fHits.size() << endl;
     cout << "fEvent->GetMult() " << fEvent->GetMult() << endl;
     cout << "removed from files: ";
@@ -129,22 +200,29 @@ void BuildEvents::ProcessHits(){
   }
 }
 void BuildEvents::CloseEvent(){
-  if(fVerboseLevel>-1)
+  if(fVerboseLevel>0){
     cout <<__PRETTY_FUNCTION__ << endl;
-  
-  if(fWriteTree){
+    fEvent->Print();
+  }
+
+  if(fWriteTree && fEvent->GetMult()>0){
     fTree->Fill();
   }
-  fEvent->Clear();
+  fEvent->Clear();  
 }
 long long int BuildEvents::Unpack(unsigned short det){
+  //unpack two blocks from file det
   long long int bytes_read = UnpackCrystal(det);
   bytes_read +=UnpackCrystal(det);
   
-  fNbuffers ++;
-  cout << "fNbuffers " << fNbuffers << "\tfNhits " << fNhits << endl;
-  cout << "bytes_read " << bytes_read << endl;
-  cout << "fHits.size() " << fHits.size() << endl;
+  //store from which file I read
+  fRead.push_back(det);
+  fNbuffers++;
+  if(fVerboseLevel>1){
+    cout << "fNbuffers " << fNbuffers << "\tfNhits " << fNhits << endl;
+    cout << "bytes_read " << bytes_read << endl;
+    cout << "fHits.size() " << fHits.size() << endl;
+  }
   return bytes_read;
 }
 long long int BuildEvents::UnpackCrystal(unsigned short det){
@@ -167,7 +245,6 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   bsize = fread(buffer, sizeof(unsigned short), 1, fDatafiles[det]);
   if(bsize == 0)
     return 0;
-
   int detID = (buffer[0]&0xff00)>>8;
   int trigg = (buffer[0]&0x0080)>>7;
   int board = (buffer[0]&0x0040)>>6;
@@ -280,10 +357,10 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
       cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
   }
   bytes_read += 8*sizeof(unsigned short);
-  if(fVerboseLevel>1)
+  if(fVerboseLevel>1){
     cout << "bytes_read: " << bytes_read << endl;
-  if(fVerboseLevel>-1)
     hit->Print();
+  }
 
   //for now taking all of them, but the data seems corrupted
   fHits.push_back(hit);

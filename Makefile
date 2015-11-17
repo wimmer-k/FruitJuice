@@ -21,7 +21,7 @@ ALLIBS  	=  $(BASELIBS) -lCommandLineInterface -lGrape
 LIBS 		= $(ALLIBS)
 LFLAGS		= -g -fPIC -shared
 
-SWITCH = -UWRITE_WAVE
+SWITCH = -DWRITE_WAVE
 CFLAGS += $(SWITCH)
 LFLAGS += $(SWITCH)
 CFLAGS += -Wl,--no-as-needed
