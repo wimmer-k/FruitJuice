@@ -14,7 +14,7 @@ public:
   GrapeSeg(){
     Clear();
   }
-  void Clear(){
+  void Clear(Option_t *option = ""){
     fSegNumber = sqrt(-1);
     fSegTS = sqrt(-1);
     fSegPHA = sqrt(-1);
@@ -54,7 +54,7 @@ public:
   GrapeHit(){
     Clear();
   }
-  void Clear(){
+  void Clear(Option_t *option = ""){
     fFileNumber = -1;
     fTrigFlag = sqrt(-1);
     fBoardNumber = sqrt(-1);
@@ -100,7 +100,7 @@ public:
   vector<GrapeSeg>* GetSegments(){return &fSegments;}
   unsigned short GetSegMult(){return fSegMult;}
   
-  bool HasSumWave(){
+  bool HasSumWave() const {
     for(unsigned short i=0;i<fSumWave.size();i++){
       if(fSumWave.at(i)>0){
 	return true;
@@ -108,8 +108,7 @@ public:
     }
     return false;
   }
-
-  void Print(){
+  void Print(Option_t *option = "") const {
     cout << "detID: " << fDetNumber;
     cout << "\tBN: " << fBoardNumber;
     cout << "\tTS: " << fSumTS;
@@ -119,7 +118,7 @@ public:
     else 
       cout << "\tWAVE: N";
     cout << "\t#Seg: "<< fSegMult << endl;
-  }
+  } 
 
 protected:
   //! From which file was the hit read. (redundant should be equialent to the detector number fDetNumber)
@@ -154,7 +153,7 @@ public:
   GrapeEvent(){
     Clear();
   };
-  void Clear(){
+  void Clear(Option_t *option = ""){
     fMult = 0;
     fHits.clear();
   }
@@ -164,10 +163,11 @@ public:
     fHits.push_back(add);
     fMult++;
   }
-  void Print(){
+  void Print(Option_t *option = "") const {
+    cout << "multiplicity " << fMult << " event" << endl;
     for(unsigned short i=0;i<fHits.size();i++)
       fHits.at(i)->Print();
-  }
+  } 
 protected:
   //! a vector containing the hits which belong to the event
   vector <GrapeHit*> fHits;
