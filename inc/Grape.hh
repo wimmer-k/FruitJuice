@@ -7,13 +7,18 @@
 
 #include "TObject.h"
 #include "Grapedefs.h"
-
 using namespace std;
+
+/*!
+  Container for the information of one segment, contains segment number, time-stamp energy and waveform
+*/
 class GrapeSeg : public TObject {
 public:
+  //! default constructor
   GrapeSeg(){
     Clear();
   }
+  //! Clear the segment information
   void Clear(Option_t *option = ""){
     fSegNumber = sqrt(-1);
     fSegTS = sqrt(-1);
@@ -21,15 +26,24 @@ public:
     fSegWave.clear();
     fSegWave.resize(WAVE_LENGTH);
   }
+  //! Set the segment number
   void SetSegNumber(unsigned short segnumber){fSegNumber = segnumber;}
+  //! Set the segment time-stamp
   void SetSegTS(unsigned short segTS){fSegTS = segTS;}
+  //! Set the segment pulse height amplitude
   void SetSegPHA(unsigned short segPHA){fSegPHA = segPHA;}
+  //! Set the segment waveform a sample n
   void SetSegWave(unsigned short n, unsigned short segWave){fSegWave.at(n) = segWave;}
+  //! Set the segment waveform
   void SetSegWave(vector<unsigned short> segWave){fSegWave = segWave;}
 
+  //! Returns the segment number
   unsigned short GetSegNumber(){return fSegNumber;}
+  //! Returns the segment time-stamp
   unsigned short GetSegTS(){return fSegTS;}
+  //! Returns the segment pulse height amplitude
   unsigned short GetSegPHA(){return fSegPHA;}
+  //! Returns the segment waveform
   vector <unsigned short> GetWave(){return fSegWave;}
 
 protected:
@@ -45,15 +59,22 @@ protected:
 #else
   vector <unsigned short> fSegWave; //!
 #endif
+
+  /// \cond CLASSIMP
   ClassDef(GrapeSeg,1);
+  /// \endcond
 };
 
-
+/*!
+  Container for the information of a single hit, contains identifying information, LED, time-stamp, and energy, the waveform and a vector of GrapeSeg for the segments
+*/
 class GrapeHit : public TObject {
 public:
+  //! default constructor
   GrapeHit(){
     Clear();
   }
+  //! Clear the hit information, including the segments
   void Clear(Option_t *option = ""){
     fFileNumber = -1;
     fTrigFlag = sqrt(-1);
@@ -67,14 +88,23 @@ public:
     fSegments.clear();
     fSegMult = 0;
   }
+  //! Set the file number
   void SetFileNumber(short filenumber){fFileNumber = filenumber;}
+  //! Set the trigger flag
   void SetTrigFlag(unsigned short trigflag){fTrigFlag = trigflag;}
+  //! Set the board number
   void SetBoardNumber(unsigned short boardnumber){fBoardNumber = boardnumber;}
+  //! Set the detector/module number
   void SetDetNumber(unsigned short detnumber){fDetNumber = detnumber;}
+  //! Set the Sum contact leading edge time
   void SetSumLET(unsigned short sumLET){fSumLET = sumLET;}
+  //! Set the Sum contact time-stamp
   void SetSumTS(long long int sumTS){fSumTS = sumTS;}
+  //! Set the Sum contact pulse height amplitude
   void SetSumPHA(unsigned short sumPHA){fSumPHA = sumPHA;}
+  //! Set the Sum contact waveform a sample n
   void SetSumWave(unsigned short n, unsigned short sumWave){fSumWave.at(n) = sumWave;}
+  //! Set the Sum contact waveform
   void SetSumWave(vector<unsigned short> sumWave){fSumWave = sumWave;}
   
   //! Adds one segment, if the pulse height of the segment is >0 the multiplicity is increased
@@ -88,18 +118,31 @@ public:
       fSegMult++;
     }
   }
+  
+  //! Returns the file number 
   short GetFileNumber(){return fFileNumber;}
+   //! Returns the trigger flag
   unsigned short GetTrigFlag(){return fTrigFlag;}
+  //! Returns the board number
   unsigned short GetBoardNumber(){return fBoardNumber;}
+  //! Returns the detector/module number
   unsigned short GetDetNumber(){return fDetNumber;}
+  //! Returns the Sum contact leading edge time
   unsigned short GetSumLET(){return fSumLET;}
+  //! Returns the Sum contact time-stamp
   long long int GetSumTS(){return fSumTS;}
+  //! Returns the Sum contact pulse height amplitude
   unsigned short GetSumPHA(){return fSumPHA;}
+  //! Returns the Sum contact waveform
   vector <unsigned short> GetSumWave(){return fSumWave;}
+  //! Returns the segment number n
   GrapeSeg* GetSegment(int n){return &fSegments.at(n);}
+  //! Returns the segments
   vector<GrapeSeg>* GetSegments(){return &fSegments;}
+  //! Returns the segment multiplicity
   unsigned short GetSegMult(){return fSegMult;}
   
+  //! Returns true if the Sum contact has a waveform
   bool HasSumWave() const {
     for(unsigned short i=0;i<fSumWave.size();i++){
       if(fSumWave.at(i)>0){
@@ -108,6 +151,7 @@ public:
     }
     return false;
   }
+  //! Printing information
   void Print(Option_t *option = "") const {
     cout << "detID: " << fDetNumber;
     cout << "\tBN: " << fBoardNumber;
@@ -145,24 +189,36 @@ protected:
   vector <GrapeSeg> fSegments;
   //! multiplicity of segments with net charge
   unsigned short fSegMult;
+
+  /// \cond CLASSIMP
   ClassDef(GrapeHit,1);
+  /// \endcond
 };
 
+/*!
+  Container for the information of an event, contains a vector of GrapeHit for the hits and their multplicity
+*/
 class GrapeEvent : public TObject {
 public:
+  //! default constructor
   GrapeEvent(){
     Clear();
   };
+  //! Clear the event information, including all hits contained
   void Clear(Option_t *option = ""){
     fMult = 0;
     fHits.clear();
   }
+  //! Returns the multiplicity of the event
   unsigned short GetMult(){return fMult;}
+  //! Returns the hit number i
   GrapeHit* GetHit(unsigned short i){return fHits.at(i);}
+  //! Add a hit to the event
   void Add(GrapeHit* add){
     fHits.push_back(add);
     fMult++;
   }
+  //! Printing information
   void Print(Option_t *option = "") const {
     cout << "multiplicity " << fMult << " event" << endl;
     for(unsigned short i=0;i<fHits.size();i++)
@@ -173,12 +229,18 @@ protected:
   vector <GrapeHit*> fHits;
   //! multiplicity of hits in the event
   unsigned short fMult;
+
+  /// \cond CLASSIMP
   ClassDef(GrapeEvent,1);
+  /// \endcond
 };
 
-//! compares time-stamps of the hits
+/*!
+  Compare two hits by their time-stamps
+*/
 class HitComparer {
 public:
+  //! compares time-stamps of the hits
   bool operator() ( GrapeHit *lhs, GrapeHit *rhs) {
     return (*lhs).GetSumTS() < (*rhs).GetSumTS();
   }

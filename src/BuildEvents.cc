@@ -2,18 +2,34 @@
 using namespace std;
 using namespace TMath;
 
+/*!
+  Swap two bytes a and b
+  \param a
+  \param b
+  \return void
+*/
 void swapbytes(char* a, char *b){
   char tmp=*a;
   *a=*b;
   *b=tmp;
 }
 
-// data is high endian format
+/*!
+  Convert the buffer from high endian to low endian format
+  \param cBuf the buffer to be converted
+  \param bytes length in bytes of the buffer
+  \return void
+*/
 void  HEtoLE(char* cBuf, int bytes){
   for(int i=0; i<bytes; i+=2)
     swapbytes((cBuf+i), (cBuf+i+1));
 }
 
+/*!
+  Initialize the BuildEvents. The number of detector modules and the corresponding files are read from a settings file, the event building window is set, the tree is initialized, counters and hit/event storers are cleared
+  \param settings the settings file
+  \return settings are valid
+*/
 bool BuildEvents::Init(char *settings){
   if(fVerboseLevel>2)
     cout <<__PRETTY_FUNCTION__<< endl;
@@ -61,13 +77,11 @@ bool BuildEvents::Init(char *settings){
 
   return true;
 }
-void BuildEvents::Run(int last){
-  for(int i=0;i<last;i++){
-    Unpack(0);
-    cout << "------------------------------------" << endl;
-    fHits.clear();
-  }
-}
+
+/*!
+  Read one double block (detector A and B) from each file
+  \return the number of bytes read
+*/
 long long int BuildEvents::ReadEachFile(){
   long long int bytes_read = 0;
   for(unsigned short i=0; i<fNdet; i++){
@@ -77,6 +91,11 @@ long long int BuildEvents::ReadEachFile(){
   }
   return bytes_read;
 }
+
+/*!
+  Read one double block (detector A and B) from files that have been previously added to the event. If the memory is empty, each file will be read. If there are still hits in memory, it will check if there hits from that module or file. In that case, the file will not be read again, but the hit removed from memory.
+  \return the number of bytes read and if reading was successfull
+*/
 pair<long long int,bool> BuildEvents::ReadNewFiles(){
   if(fVerboseLevel>0)
     cout <<__PRETTY_FUNCTION__ << endl;
@@ -93,8 +112,7 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
       cout << *read << " ";
     }
     cout <<  endl;
-  }
-  if(fVerboseLevel>0){
+
     cout << "I want to read from files: "; 
     for(set<unsigned short>::iterator remo= fRemoved.begin();remo !=fRemoved.end();++remo){
       cout << *remo << " ";
@@ -141,14 +159,13 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
   if(returnvalue.first<1 && triedtoread){
     returnvalue.second = false;
   }
-  // cout << "returning " << returnvalue.first << " and ";
-  // if(returnvalue.second)
-  //   cout << "TRUE " << endl;
-  // if(!returnvalue.second)
-  //   cout << "FALSE " << endl;
   return returnvalue;
 }
 
+/*!
+  Uses the HitComparer Class to sort the hits in memory by their time stamp. Earlies hits will be in the beginning of fHits, later hits towards the end
+  \return void
+*/
 void BuildEvents::SortHits(){
   if(fVerboseLevel>0)
     cout <<__PRETTY_FUNCTION__ << endl;
@@ -159,6 +176,11 @@ void BuildEvents::SortHits(){
       fHits.at(i)->Print();
   }
 }
+
+/*!
+  Builds the events, the first hit in the time sorted vector is automatically added to the event. Subsequent hits are compared in time-stamp and if they lie within the window they are added to the event.
+  \return void
+*/
 void BuildEvents::ProcessHits(){
   if(fVerboseLevel>0)
     cout << __PRETTY_FUNCTION__ << "before fHits.size() = " << fHits.size() << endl;
@@ -197,6 +219,11 @@ void BuildEvents::ProcessHits(){
     cout << endl;
   }
 }
+
+/*!
+  If the event multiplicity is larger than 0, the event will be written to the tree (if fWriteTree is set), and the event will be cleared.
+  \return void
+*/
 void BuildEvents::CloseEvent(){
   if(fVerboseLevel>0){
     cout <<__PRETTY_FUNCTION__ << endl;
@@ -208,6 +235,12 @@ void BuildEvents::CloseEvent(){
   }
   fEvent->Clear();  
 }
+
+/*!
+  Unpacks the data from one module (detector A and B), the file number or detector module number from will be stored in fRead.
+  \param det the file number or detector module number from which to read
+  \return the number of bytes read
+*/
 long long int BuildEvents::Unpack(unsigned short det){
   //unpack two blocks from file det
   long long int bytes_read = UnpackCrystal(det);
@@ -223,6 +256,12 @@ long long int BuildEvents::Unpack(unsigned short det){
   }
   return bytes_read;
 }
+
+/*!
+  Unpacks the data from one crystal (detector A and B). The binary data will be unpacked and stored in a GrapeHit, segment information will be added in a vector of GrapeSeg. Basic data integrity check are performed
+  \param det the file number or detector module number from which to read
+  \return the number of bytes read
+*/
 long long int BuildEvents::UnpackCrystal(unsigned short det){
   long long int bytes_read = 0;
   if(fVerboseLevel>1){

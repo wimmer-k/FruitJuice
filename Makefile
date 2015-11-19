@@ -58,7 +58,10 @@ build/GrapeDictionary.cc: inc/Grape.hh inc/GrapeLinkDef.h
 	@mkdir -p build
 	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(SWITCH) $(notdir $^)
 
+doc:	doxyconf
+	doxygen doxyconf
+
 clean:
 	@echo "Cleaning up"
-	@rm -rf build
-	@rm inc/*~ src/*~
+	@rm -rf build doc
+	@rm -f inc/*~ src/*~ *~

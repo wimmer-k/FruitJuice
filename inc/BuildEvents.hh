@@ -13,9 +13,14 @@
 #include "Grapedefs.h"
 #include "Grape.hh"
 
+/*!
+  A class for unpacking and event building of GRAPE data
+*/
 class BuildEvents {
 public:
+  //! dummy constructor
   BuildEvents(){};
+  //! dummy destructor
   ~BuildEvents(){
     delete fEvent;
   };
@@ -46,8 +51,6 @@ public:
   //! Get the size of the vector of stored hits
   unsigned short GetHitsLeft(){return fHits.size();}
   
-  //! dummy method to be delete
-  void Run(int last);
 protected:
   //! Verbose level
   unsigned short fVerboseLevel;
