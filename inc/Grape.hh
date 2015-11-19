@@ -153,7 +153,8 @@ public:
   }
   //! Printing information
   void Print(Option_t *option = "") const {
-    cout << "detID: " << fDetNumber;
+    cout << "file: " << fFileNumber;
+    cout << "\tdetID: " << fDetNumber;
     cout << "\tBN: " << fBoardNumber;
     cout << "\tTS: " << fSumTS;
     cout << "\tPHA: "<< fSumPHA;

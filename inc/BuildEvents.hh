@@ -28,6 +28,10 @@ public:
   void SetVL(unsigned short vl){
     fVerboseLevel = vl;
   }
+  //! Set if the tree is to be written
+  void SetWriteTree(bool writetree){
+    fWriteTree = writetree;
+  }
   //! Initialyze the event builder, read the settings, and create the tree
   bool Init(char* settings);
   //! Read and unpack two blocks from each detector file
@@ -74,9 +78,7 @@ protected:
 
   //! The event building window
   unsigned int fEventWindow;
-  //! which detectors have been removed from the vector, a set will be unique 
-  set<unsigned short> fRemoved;
-  //! which files are already read and in memory
+  //! how many hits from each file already read and in memory
   vector<unsigned short> fRead;
 
   //! The built event, 
