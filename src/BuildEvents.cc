@@ -397,11 +397,20 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
       cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
   }
   bytes_read += 8*sizeof(unsigned short);
+  
+  //check for0xffff
+  if(!CheckBufferEnd(buffer)){
+    cerr << "\ninconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
+    for(int i=0;i<8;i++){
+      cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
+    }
+    //fVerboseLevel =3;
+  }
+  
   if(fVerboseLevel>1){
     cout << "bytes_read: " << bytes_read << endl;
     hit->Print();
   }
-  
   //for now taking all of them, but the data seems corrupted
 //  if(hit->GetSumTS()<fCurrentTS){ 
 //    cout << "------"<<fNbuffers<<"--------------->bad hit! current time is " << fCurrentTS<< endl;
@@ -424,4 +433,24 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   if(fVerboseLevel>2)
     cout <<__PRETTY_FUNCTION__<< " end"<<endl;
   return bytes_read;
+}
+
+/*!
+  Checking the end of the hit buffer,
+  \param buffer[8] 8 words at the end of the hit buffer
+  \return hit buffer length OK
+*/
+bool BuildEvents::CheckBufferEnd(unsigned short buffer[16]){
+  if(fVerboseLevel>2){
+    cout <<__PRETTY_FUNCTION__<<endl;
+    for(int i=0;i<8;i++){
+      cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
+    }
+  }
+  for(int i=0;i<8;i++){
+    if(buffer[i]!=0xffff)
+      return false;
+  }
+  //cout <<__PRETTY_FUNCTION__<< " end"<<endl;
+  return true;
 }

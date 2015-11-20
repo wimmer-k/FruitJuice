@@ -48,6 +48,8 @@ public:
   void ProcessHits();
   //! Close the current event
   void CloseEvent();
+  //! Check the end of the hit buffer, this should be 8 times 0xffff
+  bool CheckBufferEnd(unsigned short buffer[16]);
   //! Returns the tree for writing to file
   TTree* GetTree(){return fTree;}
   //! Returns the number of buffers read
