@@ -97,15 +97,18 @@ int main(int argc, char* argv[]){
 
   cout << endl;
   cout << "------------------------------------" << endl;
-  cout << "Total of " << evt->GetNBuffers() << " data buffers ("<<bytes_read/(1024*1024)<<" MB) read." << endl;
-  cout << evt->GetTree()->GetEntries() << " entries written to tree ("<<evt->GetTree()->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
+  cout << "Total of " << evt->GetNBuffers() << " data buffers ("<<bytes_read*1.0/(1024*1024)<<" MB) read." << endl;
+  cout << evt->GetTree()->GetEntries() << " entries written to tree ("<<evt->GetTree()->GetZipBytes()*1.0/(1024*1024)<<" MB)"<< endl;
+  cout << "First time-stamp: " <<  evt->GetFirstTS() << ", last time-stamp: " << evt->GetCurrentTS() << ", data taking time: " << (evt->GetCurrentTS() - evt->GetFirstTS())*1e-8 << " seconds." << endl;
+  cout << "problems in the data:" << endl;
+  cout << "had to skip " << evt->GetSkippedWords() << " words (" << evt->GetSkippedWords()*2./1024 << " kB)" << endl;
   ofile->cd();
 
   if(WriteTree)
     evt->GetTree()->Write();
   ofile->Close();
   double time_end = get_time();
-  cout << "Program Run time " << time_end - time_start << " s." << endl;
+  cout << "Program Run time: " << time_end - time_start << " s." << endl;
   cout << "Unpacked " << evt->GetNBuffers()/(time_end - time_start) << " buffers/s." << endl;
   timer.Stop();
   cout << "\n CPU time: " << timer.CpuTime() << "\tReal time: " << timer.RealTime() << endl;

@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <queue>
 
 #include "TTree.h"
 #include "TEnv.h"
@@ -49,13 +50,21 @@ public:
   //! Close the current event
   void CloseEvent();
   //! Check the end of the hit buffer, this should be 8 times 0xffff
-  bool CheckBufferEnd(unsigned short buffer[16]);
+  bool CheckBufferEnd(unsigned short *buffer);
+  //! Skip bytes until the next  8 times 0xffff occurs
+  pair<long long int,bool> SkipBytes(unsigned short det, unsigned short buffer[8]);
   //! Returns the tree for writing to file
   TTree* GetTree(){return fTree;}
   //! Returns the number of buffers read
   unsigned int GetNBuffers(){return fNbuffers;}
   //! Get the size of the vector of stored hits
   unsigned short GetHitsLeft(){return fHits.size();}
+  //! Returns the first time-stamp
+  unsigned int GetFirstTS(){return fFirstTS;}
+  //! Returns the current time-stamp
+  unsigned int GetCurrentTS(){return fCurrentTS;}
+  //! Returns the number of skipped words
+  long long int GetSkippedWords(){return fSkipped;}
   
 protected:
   //! Verbose level
@@ -68,6 +77,8 @@ protected:
   unsigned int fNbuffers;
   //! The number of hits read (should be 2*fNbuffers)
   unsigned int fNhits;
+  //! The number of skipped words
+  long long int fSkipped;
 
   //! The number of detectors or data files
   unsigned short fNdet;

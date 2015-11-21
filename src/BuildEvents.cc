@@ -77,7 +77,8 @@ bool BuildEvents::Init(char *settings){
 
   fNbuffers = 0;
   fNhits = 0;
-
+  fCurrentTS = 0;
+  fFirstTS = -1;
   return true;
 }
 
@@ -195,6 +196,8 @@ void BuildEvents::ProcessHits(){
   //first hit always good:
   fEvent->Add(fHits.at(0));
   fCurrentTS = fHits.at(0)->GetSumTS();
+  if(fFirstTS<0)
+    fFirstTS = fHits.at(0)->GetSumTS();
   //remove this from the counter
   fRead.at(fHits.at(0)->GetFileNumber())--;
   fHits.erase(fHits.begin() + 0);
@@ -346,13 +349,13 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
 
 
   //one word for each segment Abs count
-  unsigned short int SAbscount[9];
+  unsigned short SAbscount[9];
   bsize = fread(SAbscount, sizeof(unsigned short), 9, fDatafiles[det]);
   HEtoLE((char*)SAbscount,18);
   bytes_read += 9*sizeof(unsigned short);
 
   //one word for each segment pulse height
-  unsigned short int Spha[9];
+  unsigned short Spha[9];
   bsize = fread(Spha, sizeof(unsigned short), 9, fDatafiles[det]);
   HEtoLE((char*)Spha,18);
   if(fVerboseLevel>2){
@@ -368,7 +371,7 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   segments.resize(NUM_SEGMENTS);
 
   //48 words for each segments containing the wave
-  unsigned short int Swave[9][48];
+  unsigned short Swave[9][48];
   for(int i=0;i<9;i++){
     bsize = fread(Swave[i], sizeof(unsigned short), 48, fDatafiles[det]);
     HEtoLE((char*)Swave[i],96);
@@ -382,7 +385,7 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   }
     
   //48 words for SUM containing the wave
-  unsigned short int wave[48];
+  unsigned short wave[48];
   bsize = fread(wave, sizeof(unsigned short), 48, fDatafiles[det]);
   HEtoLE((char*)wave,96);
   bytes_read += 48*sizeof(unsigned short);
@@ -401,10 +404,15 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   //check for0xffff
   if(!CheckBufferEnd(buffer)){
     cerr << "\ninconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
-    for(int i=0;i<8;i++){
-      cout <<i<<"\t"<< buffer[i] <<"\t0x"<<(hex) <<buffer[i] << (dec) << endl;
+    
+    pair<long long int, bool> readsuccess = SkipBytes(det,buffer);
+    bytes_read += readsuccess.first;
+    if(readsuccess.second ==false){
+      cerr << "problem with skipping bytes " << endl;
+      return 0;
     }
-    //fVerboseLevel =3;
+    //the current event is:
+    hit->Print();
   }
   
   if(fVerboseLevel>1){
@@ -437,10 +445,10 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
 
 /*!
   Checking the end of the hit buffer,
-  \param buffer[8] 8 words at the end of the hit buffer
+  \param buffer pointer to the buffer (first of the 8 words) at the end of the hit buffer
   \return hit buffer length OK
 */
-bool BuildEvents::CheckBufferEnd(unsigned short buffer[16]){
+bool BuildEvents::CheckBufferEnd(unsigned short *buffer){
   if(fVerboseLevel>2){
     cout <<__PRETTY_FUNCTION__<<endl;
     for(int i=0;i<8;i++){
@@ -453,4 +461,66 @@ bool BuildEvents::CheckBufferEnd(unsigned short buffer[16]){
   }
   //cout <<__PRETTY_FUNCTION__<< " end"<<endl;
   return true;
+}
+/*!
+  If the length of the buffer is not 1024 bytes, i.e. the end of the buffer is not 8 times 0xffff, this function reads until 8 times 0xffff is found. It will record how many words (unsigned short) have been skipped
+  \param det the file number or detector module number from which to read
+  \param buffer[8] 8 words which are not 0xffff
+  \return the number of bytes newly read and if reading was successfull
+*/
+pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned short buffer[8]){
+  if(fVerboseLevel>2){
+    cout <<__PRETTY_FUNCTION__<<endl;
+  }
+
+  //returns the number of bytes read, and if successfull.
+  std::pair <long long int, bool> returnvalue;
+  returnvalue.second = true;
+
+  //put all 8 buffers into a ring
+  std::deque<unsigned short> ring;
+  for(int i=0;i<8;i++){
+    ring.push_back(buffer[i]);
+  }
+  if(fVerboseLevel>2){
+    cout << "ring queue: " << endl;
+    int ctr =0;
+    for(deque<unsigned short>::iterator el= ring.begin();el !=ring.end();++el){
+      cout << ctr << "\t"<< *el <<"\t0x"<<(hex) <<*el<< (dec) << endl;
+      ctr++;
+    }
+  }
+  returnvalue.first = 0;
+  size_t bsize =0;
+
+  //check the first element of the ring, if its goo, check them all
+  //if the first parameter to && is false, the rest will not be evaluated
+  while(ring.front()!=0xffff&&!CheckBufferEnd(&ring.front())){
+    //remove the first element
+    ring.pop_front();
+    fSkipped++;
+    //read one new word
+    unsigned short readone[1];
+    bsize = fread(readone, sizeof(unsigned short), 1, fDatafiles[det]);
+    if(bsize==0){
+      cerr<<"end of file " << det<<" reached" << endl;
+      returnvalue.second = false;
+      break;
+    }
+    returnvalue.first += 1*sizeof(unsigned short);
+    //add the new word to the ring
+    ring.push_back(readone[0]);
+  }
+    
+
+  cout << "skipped " << fSkipped << "words, newly read " << returnvalue.first << " bytes"<< endl;
+  if(fVerboseLevel>2){
+    cout <<" now the queue containd: " << endl;
+    int ctr =0;
+    for(deque<unsigned short>::iterator el= ring.begin();el !=ring.end();++el){
+      cout << ctr << "\t"<< *el <<"\t0x"<<(hex) <<*el<< (dec) << endl;
+      ctr++;
+    }
+  }
+  return returnvalue;
 }
