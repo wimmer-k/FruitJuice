@@ -49,6 +49,8 @@ public:
   void ProcessHits();
   //! Close the current event
   void CloseEvent();
+  //! Print error counters
+  void PrintErrors();
   //! Check the end of the hit buffer, this should be 8 times 0xffff
   bool CheckBufferEnd(unsigned short *buffer);
   //! Skip bytes until the next  8 times 0xffff occurs
@@ -75,10 +77,12 @@ protected:
   TTree *fTree;
   //! The number of buffers read
   unsigned int fNbuffers;
-  //! The number of hits read (should be 2*fNbuffers)
+  //! The number of hits read (should be 2*fNbuffers, if there are no errors)
   unsigned int fNhits;
   //! The number of skipped words
   long long int fSkipped;
+  //! The error counter
+  unsigned int fErrors[10];
 
   //! The number of detectors or data files
   unsigned short fNdet;

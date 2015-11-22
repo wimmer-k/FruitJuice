@@ -79,6 +79,9 @@ bool BuildEvents::Init(char *settings){
   fNhits = 0;
   fCurrentTS = 0;
   fFirstTS = -1;
+  for(unsigned short i=0;i<10;i++){
+    fErrors[i] =0;
+  }
   return true;
 }
 
@@ -269,6 +272,7 @@ long long int BuildEvents::Unpack(unsigned short det){
 */
 long long int BuildEvents::UnpackCrystal(unsigned short det){
   long long int bytes_read = 0;
+  bool hitgood = true;
   if(fVerboseLevel>1){
     cout <<__PRETTY_FUNCTION__<< endl;
     cout << "unpacking file for detector " << det << endl;
@@ -401,18 +405,23 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   }
   bytes_read += 8*sizeof(unsigned short);
   
+
+
   //check for0xffff
   if(!CheckBufferEnd(buffer)){
-    cerr << "\ninconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
-    
+    cerr << "inconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
+    fErrors[0]++;
+    hitgood = false;
     pair<long long int, bool> readsuccess = SkipBytes(det,buffer);
     bytes_read += readsuccess.first;
     if(readsuccess.second ==false){
       cerr << "problem with skipping bytes " << endl;
       return 0;
     }
-    //the current event is:
-    hit->Print();
+    if(fVerboseLevel>1){
+      cout << "the current hit will be skipped: " << endl;
+      hit->Print();
+    }
   }
   
   if(fVerboseLevel>1){
@@ -425,7 +434,14 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
 //    hit->Print();
 //  }
 
+  // if the hit fails the checks, bail out
+  if(!hitgood)
+    return bytes_read;
+
+  //store the hit
   fHits.push_back(hit);
+  //count up the number of hits
+  fNhits++;
   //store from which file I read
   fRead.at(det)++;
   if(fVerboseLevel>0){
@@ -435,11 +451,6 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
     }
     cout << endl;
   }
-  //count up the number of hits
-  fNhits++;
-
-  if(fVerboseLevel>2)
-    cout <<__PRETTY_FUNCTION__<< " end"<<endl;
   return bytes_read;
 }
 
@@ -462,6 +473,7 @@ bool BuildEvents::CheckBufferEnd(unsigned short *buffer){
   //cout <<__PRETTY_FUNCTION__<< " end"<<endl;
   return true;
 }
+
 /*!
   If the length of the buffer is not 1024 bytes, i.e. the end of the buffer is not 8 times 0xffff, this function reads until 8 times 0xffff is found. It will record how many words (unsigned short) have been skipped
   \param det the file number or detector module number from which to read
@@ -513,7 +525,7 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
   }
     
 
-  cout << "skipped " << fSkipped << "words, newly read " << returnvalue.first << " bytes"<< endl;
+  cout << "skipped " << fSkipped << " words (cumulative), newly read " << returnvalue.first << " bytes"<< endl;
   if(fVerboseLevel>2){
     cout <<" now the queue containd: " << endl;
     int ctr =0;
@@ -523,4 +535,20 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
     }
   }
   return returnvalue;
+}
+
+/*!
+  Print the couter of different errors that occurred during unpacking, if too many happen, the data file is corrupted
+*/
+void BuildEvents::PrintErrors(){
+  char* errorcode[4] = {
+    (char*)"\tHit buffer didn't end with 8 times 0xffff",
+    (char*)"\tTime-stamp of hit is smaller than the current time",
+    (char*)"\tTime-stamp difference too large",
+    (char*)"\tDetector number inconsistent",
+  };
+  for(unsigned short i=0;i<10;i++){
+    if(fErrors[i]>0)
+      cout << fErrors[i] << errorcode[i] << endl;
+  }
 }

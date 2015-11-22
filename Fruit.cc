@@ -102,6 +102,8 @@ int main(int argc, char* argv[]){
   cout << "First time-stamp: " <<  evt->GetFirstTS() << ", last time-stamp: " << evt->GetCurrentTS() << ", data taking time: " << (evt->GetCurrentTS() - evt->GetFirstTS())*1e-8 << " seconds." << endl;
   cout << "problems in the data:" << endl;
   cout << "had to skip " << evt->GetSkippedWords() << " words (" << evt->GetSkippedWords()*2./1024 << " kB)" << endl;
+  cout << "The following errors happend during unpacking" << endl;
+  evt->PrintErrors();
   ofile->cd();
 
   if(WriteTree)
