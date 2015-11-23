@@ -11,6 +11,7 @@
 #include "TEnv.h"
 #include "TObject.h"
 
+#include "Globaldefs.h"
 #include "Grapedefs.h"
 #include "Grape.hh"
 
@@ -24,6 +25,7 @@ public:
   //! dummy destructor
   ~BuildEvents(){
     delete fEvent;
+    delete fTree;
   };
   //! Set the verbose level
   void SetVL(unsigned short vl){
@@ -42,7 +44,7 @@ public:
   //! Unpack one detector, read and unpack from one file
   long long int Unpack(unsigned short det);
   //! Unpack one crystal, create a hit, add it to the storage vector
-  long long int UnpackCrystal(unsigned short det);
+  long long int UnpackCrystal(unsigned short det, long long int &ts);
   //! Sort the hits according to their time stamp
   void SortHits();
   //! Process the hits and build one event
@@ -62,9 +64,9 @@ public:
   //! Get the size of the vector of stored hits
   unsigned short GetHitsLeft(){return fHits.size();}
   //! Returns the first time-stamp
-  unsigned int GetFirstTS(){return fFirstTS;}
+  long long int GetFirstTS(){return fFirstTS;}
   //! Returns the current time-stamp
-  unsigned int GetCurrentTS(){return fCurrentTS;}
+  long long int GetCurrentTS(){return fCurrentTS;}
   //! Returns the number of skipped words
   long long int GetSkippedWords(){return fSkipped;}
   
@@ -88,6 +90,8 @@ protected:
   unsigned short fNdet;
   //! The raw datafiles 
   vector <FILE*> fDatafiles;
+  //! The detector numbers
+  vector <unsigned short> fDetNumbers;
   //! The current time-stamp
   long long int fCurrentTS;
   //! The first time-stamp
@@ -95,7 +99,9 @@ protected:
 
   //! The event building window
   unsigned int fEventWindow;
-  //! how many hits from each file already read and in memory
+  //! Maximum time-stamp difference between module A and B
+  unsigned int fMaxTSDiff;
+  //! How many hits from each file already read and in memory
   vector<unsigned short> fRead;
 
   //! The built event, 

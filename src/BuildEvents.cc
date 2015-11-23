@@ -39,15 +39,17 @@ bool BuildEvents::Init(char *settings){
   
   //how many files to read
   fNdet = set->GetValue("Number.Of.Files",0);
-  if(fNdet<1 || fNdet>18){
+  if(fNdet<1 || fNdet>MAXNUMFILES){
     cerr << "too few or to many files to read: Number.Of.Files = " << fNdet << endl;
     return false;
   }
   cout << "reading " << fNdet << " datafiles" << endl;
   fDatafiles.resize(fNdet);
+  fDetNumbers.resize(fNdet);
   for(unsigned short i=0; i<fNdet; i++){
     string InputFile = set->GetValue(Form("File.%d",i),(char*)"nofile");
-    cout << "reading File."<<i<<"\t" << InputFile << endl;
+    fDetNumbers[i] = set->GetValue(Form("Detector.Number.%d",i),-1);
+    cout << "reading File."<<i<<" for detector " << fDetNumbers[i] <<"\t" << InputFile << endl;
     fDatafiles[i] = fopen(InputFile.c_str(),"r");
   }
 
@@ -57,6 +59,10 @@ bool BuildEvents::Init(char *settings){
   //event building window
   fEventWindow = set->GetValue("Event.Window",500);
   cout << "Event building window " << fEventWindow << " ticks" << endl;
+
+  //DAQ coincidence gate, maximum time difference between detector A and B (set carefully)
+  fMaxTSDiff = set->GetValue("Coincidence.Gate",5000000);
+  cout << "Coincidence Gate " << fMaxTSDiff << " ticks" << endl;
 
 
   fEvent = new GrapeEvent;
@@ -90,7 +96,7 @@ bool BuildEvents::Init(char *settings){
   \return the number of bytes read
 */
 long long int BuildEvents::ReadEachFile(){
-  if(fVerboseLevel>0)
+  if(fVerboseLevel>1)
     cout <<__PRETTY_FUNCTION__ << endl;
   long long int bytes_read = 0;
   for(unsigned short i=0; i<fNdet; i++){
@@ -106,7 +112,7 @@ long long int BuildEvents::ReadEachFile(){
   \return the number of bytes read and if reading was successfull
 */
 pair<long long int,bool> BuildEvents::ReadNewFiles(){
-  if(fVerboseLevel>0)
+  if(fVerboseLevel>1)
     cout <<__PRETTY_FUNCTION__ << endl;
 
   //returns the number of bytes read, and if successfull.
@@ -116,7 +122,7 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
 
   long long int bytes_read = 0;
 
-  if(fVerboseLevel>0){
+  if(fVerboseLevel>1){
     cout << "currently read in memory: "; 
     for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
       cout << *read << " ";
@@ -150,14 +156,14 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
   bool triedtoread = false;
   for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
     if(*read==0){
-      if(fVerboseLevel>0)
+      if(fVerboseLevel>1)
 	cout << "no more data from file " << read-fRead.begin() << endl;
       triedtoread = true;
       bytes_read += Unpack(read-fRead.begin());
     }
   }
 
-  if(fVerboseLevel>0){
+  if(fVerboseLevel>1){
     cout << "after reading new files read in memory: "; 
     for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
       cout << *read << " ";
@@ -177,11 +183,11 @@ pair<long long int,bool> BuildEvents::ReadNewFiles(){
   \return void
 */
 void BuildEvents::SortHits(){
-  if(fVerboseLevel>0)
+  if(fVerboseLevel>1)
     cout <<__PRETTY_FUNCTION__ << endl;
   sort(fHits.begin(), fHits.end(), HitComparer());
   if(fVerboseLevel>0){
-    cout << "sorted" << endl;
+    cout <<GREEN<< "sorted"<<DEFCOLOR << endl;
     for(unsigned short i=0;i<fHits.size();i++)
       fHits.at(i)->Print();
   }
@@ -192,8 +198,8 @@ void BuildEvents::SortHits(){
   \return void
 */
 void BuildEvents::ProcessHits(){
-  if(fVerboseLevel>0)
-    cout << __PRETTY_FUNCTION__ << "before fHits.size() = " << fHits.size() << endl;
+  if(fVerboseLevel>1)
+    cout << __PRETTY_FUNCTION__ << " before fHits.size() = " << fHits.size() << endl;
   if(fHits.size()==0)
     return;
   //first hit always good:
@@ -220,7 +226,7 @@ void BuildEvents::ProcessHits(){
     else
       break;
   }
-  if(fVerboseLevel>0){
+  if(fVerboseLevel>1){
     cout << "after fHits.size() = " << fHits.size() << endl;
     cout << "fEvent->GetMult() " << fEvent->GetMult() << endl;
     cout << "curernt files in memory: ";
@@ -237,7 +243,7 @@ void BuildEvents::ProcessHits(){
 */
 void BuildEvents::CloseEvent(){
   if(fVerboseLevel>0){
-    cout <<__PRETTY_FUNCTION__ << endl;
+    cout << BLUE << "built events: "<< DEFCOLOR<<endl;
     fEvent->Print();
   }
   if(fWriteTree && fEvent->GetMult()>0){
@@ -252,9 +258,12 @@ void BuildEvents::CloseEvent(){
   \return the number of bytes read
 */
 long long int BuildEvents::Unpack(unsigned short det){
+  long long int unpackTS =0;
+
   //unpack two blocks from file det
-  long long int bytes_read = UnpackCrystal(det);
-  bytes_read +=UnpackCrystal(det);
+  long long int bytes_read = UnpackCrystal(det,unpackTS);
+  bytes_read +=UnpackCrystal(det,unpackTS);
+
   
   fNbuffers++;
   if(fVerboseLevel>1){
@@ -268,9 +277,10 @@ long long int BuildEvents::Unpack(unsigned short det){
 /*!
   Unpacks the data from one crystal (detector A and B). The binary data will be unpacked and stored in a GrapeHit, segment information will be added in a vector of GrapeSeg. Basic data integrity check are performed
   \param det the file number or detector module number from which to read
+  \param prevunpackts 0 if this is for detector A, TS of A if B will be read
   \return the number of bytes read
 */
-long long int BuildEvents::UnpackCrystal(unsigned short det){
+long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevunpackts){
   long long int bytes_read = 0;
   bool hitgood = true;
   if(fVerboseLevel>1){
@@ -278,7 +288,7 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
     cout << "unpacking file for detector " << det << endl;
   }
   if(feof(fDatafiles[det])){
-    cout << "end of file " << endl;
+    //cout << "end of file " << endl;
     return 0;
   }
 
@@ -345,6 +355,10 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   bsize = fread(buffer, sizeof(unsigned short), 1, fDatafiles[det]);
   HEtoLE((char*)buffer,2);
   int pha = buffer[0];
+  if(pha<1){
+    fErrors[4]++;
+    hitgood = false;
+  }
   hit->SetSumPHA(pha);
   if(fVerboseLevel>1){
     cout << "PHA " << pha <<"\t0x"<<(hex) << pha << (dec) << endl;
@@ -409,18 +423,16 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
 
   //check for0xffff
   if(!CheckBufferEnd(buffer)){
-    cerr << "inconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
+    if(fVerboseLevel>0)
+      cout << "inconsistent hit length end of the buffer "<< fNbuffers <<" is not 8 times 0xffff" << endl;
     fErrors[0]++;
     hitgood = false;
     pair<long long int, bool> readsuccess = SkipBytes(det,buffer);
     bytes_read += readsuccess.first;
     if(readsuccess.second ==false){
-      cerr << "problem with skipping bytes " << endl;
+      if(fVerboseLevel>0)
+	cout << "problem with skipping bytes " << endl;
       return 0;
-    }
-    if(fVerboseLevel>1){
-      cout << "the current hit will be skipped: " << endl;
-      hit->Print();
     }
   }
   
@@ -429,14 +441,37 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
     hit->Print();
   }
   //for now taking all of them, but the data seems corrupted
-//  if(hit->GetSumTS()<fCurrentTS){ 
-//    cout << "------"<<fNbuffers<<"--------------->bad hit! current time is " << fCurrentTS<< endl;
-//    hit->Print();
-//  }
+
+  //checking if the time jumped back
+  if(hitgood && hit->GetSumTS()<fCurrentTS){ 
+    fErrors[1]++;
+    hitgood = false;
+    if(fVerboseLevel>0){
+      cout <<RED<< "--------------->bad hit! current time is " << fCurrentTS << " this one " << hit->GetSumTS()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
+    }
+  }
+  if(hitgood && prevunpackts>0 && abs(prevunpackts-hit->GetSumTS())>fMaxTSDiff){
+    fErrors[2]++;
+    hitgood = false;
+    if(fVerboseLevel>0){
+      cout <<RED<< "--------------->bad hit! previous hit read had time " << prevunpackts << " this one " << hit->GetSumTS()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
+    }
+  }
+  if(hitgood && hit->GetDetNumber() != fDetNumbers[det]){
+    fErrors[3]++;
+    hitgood = false;
+    cout <<RED<< "--------------->bad hit! detector number read " << hit->GetDetNumber()<< " file "<<det<<" is for detector " << fDetNumbers[det] << " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
+    hit->Print();
+  }
 
   // if the hit fails the checks, bail out
-  if(!hitgood)
+  if(!hitgood){
+    if(fVerboseLevel>0){
+      cout <<RED<< "the current hit will be skipped: "<<DEFCOLOR << endl;
+      hit->Print();
+    }
     return bytes_read;
+  }
 
   //store the hit
   fHits.push_back(hit);
@@ -444,13 +479,15 @@ long long int BuildEvents::UnpackCrystal(unsigned short det){
   fNhits++;
   //store from which file I read
   fRead.at(det)++;
-  if(fVerboseLevel>0){
+  if(fVerboseLevel>1){
     cout << "read a hit from file " << det << " now fRead is : ";
     for(vector<unsigned short>::iterator read= fRead.begin();read !=fRead.end();++read){
       cout << *read << " ";
     }
     cout << endl;
   }
+  prevunpackts = hit->GetSumTS();
+
   return bytes_read;
 }
 
@@ -470,14 +507,13 @@ bool BuildEvents::CheckBufferEnd(unsigned short *buffer){
     if(buffer[i]!=0xffff)
       return false;
   }
-  //cout <<__PRETTY_FUNCTION__<< " end"<<endl;
   return true;
 }
 
 /*!
   If the length of the buffer is not 1024 bytes, i.e. the end of the buffer is not 8 times 0xffff, this function reads until 8 times 0xffff is found. It will record how many words (unsigned short) have been skipped
   \param det the file number or detector module number from which to read
-  \param buffer[8] 8 words which are not 0xffff
+  \param buffer 8 words which are not 0xffff
   \return the number of bytes newly read and if reading was successfull
 */
 pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned short buffer[8]){
@@ -506,8 +542,12 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
   size_t bsize =0;
 
   //check the first element of the ring, if its goo, check them all
-  //if the first parameter to && is false, the rest will not be evaluated
-  while(ring.front()!=0xffff&&!CheckBufferEnd(&ring.front())){
+  //if the first parameter to || is true, the rest will not be evaluated
+  int ctr =0;
+  int ctrf =0;
+  while(ring.front()!=0xffff || !CheckBufferEnd(&ring.front())){
+    if(ring.front()==0xffff)
+      ctrf++;
     //remove the first element
     ring.pop_front();
     fSkipped++;
@@ -522,10 +562,13 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
     returnvalue.first += 1*sizeof(unsigned short);
     //add the new word to the ring
     ring.push_back(readone[0]);
+    ctr++;
   }
-    
-
-  cout << "skipped " << fSkipped << " words (cumulative), newly read " << returnvalue.first << " bytes"<< endl;
+  if(ctr>2048 && fVerboseLevel>0){
+    cout << MAGENTA << "skipped " << ctr << " words, during that " << ctrf << " 0xffff occurred (random order)"<< DEFCOLOR << endl;
+  }
+  if(fVerboseLevel>0)
+    cout << "skipped " << fSkipped << " words (cumulative), newly read " << returnvalue.first << " bytes"<< endl;
   if(fVerboseLevel>2){
     cout <<" now the queue containd: " << endl;
     int ctr =0;
@@ -541,11 +584,12 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
   Print the couter of different errors that occurred during unpacking, if too many happen, the data file is corrupted
 */
 void BuildEvents::PrintErrors(){
-  char* errorcode[4] = {
+  char* errorcode[5] = {
     (char*)"\tHit buffer didn't end with 8 times 0xffff",
     (char*)"\tTime-stamp of hit is smaller than the current time",
     (char*)"\tTime-stamp difference too large",
     (char*)"\tDetector number inconsistent",
+    (char*)"\tSum PHA is 0",
   };
   for(unsigned short i=0;i<10;i++){
     if(fErrors[i]>0)

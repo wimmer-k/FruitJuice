@@ -80,14 +80,16 @@ int main(int argc, char* argv[]){
     evt->SortHits();
     evt->ProcessHits();
     evt->CloseEvent();
-    if(LastBuffer>-1 &&buffers>LastBuffer-1)
+    if(LastBuffer>-1 &&buffers>LastBuffer)
       break;
+    // if(buffers==10410)     
+    //   evt->SetVL(3);
   }
 
   //cleanup
   if(Verbose>0){
-    cout << "------------------------------------" << endl;
-    cout << "Cleaning up " << endl;
+    cout <<BLUE<< "------------------------------------" << endl;
+    cout << "Cleaning up " <<DEFCOLOR<< endl;
   }
   while(evt->GetHitsLeft()>0){
     evt->SortHits();
@@ -97,8 +99,8 @@ int main(int argc, char* argv[]){
 
   cout << endl;
   cout << "------------------------------------" << endl;
-  cout << "Total of " << evt->GetNBuffers() << " data buffers ("<<bytes_read*1.0/(1024*1024)<<" MB) read." << endl;
-  cout << evt->GetTree()->GetEntries() << " entries written to tree ("<<evt->GetTree()->GetZipBytes()*1.0/(1024*1024)<<" MB)"<< endl;
+  cout << "Total of " << evt->GetNBuffers() << " data buffers ("<<bytes_read/(1024*1024)<<" MB) read." << endl;
+  cout << evt->GetTree()->GetEntries() << " entries written to tree ("<<evt->GetTree()->GetZipBytes()/(1024*1024)<<" MB)"<< endl;
   cout << "First time-stamp: " <<  evt->GetFirstTS() << ", last time-stamp: " << evt->GetCurrentTS() << ", data taking time: " << (evt->GetCurrentTS() - evt->GetFirstTS())*1e-8 << " seconds." << endl;
   cout << "problems in the data:" << endl;
   cout << "had to skip " << evt->GetSkippedWords() << " words (" << evt->GetSkippedWords()*2./1024 << " kB)" << endl;
