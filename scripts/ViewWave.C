@@ -36,7 +36,6 @@ void ViewWave(int n){
   }
   GrapeHit* gr = gre->GetHit(0);
   gr->Print();
-  //cout << gr->GetSumPHA() << endl;
   for(int i=0;i<WAVE_LENGTH;i++){
     x[i] = i;
     data[i] = (int)gr->GetSumWave()[i];
@@ -62,7 +61,6 @@ void ViewWave(int n){
     g[1+j] = new TGraph(WAVE_LENGTH,x,data);
     g[1+j]->SetTitle(Form("SEG %d E = %d",gr->GetSegment(j)->GetSegNumber(),gr->GetSegment(j)->GetSegPHA()));
   }
-  //cout << "min " << min << "\tmax " << max << endl;
   for(int j=0;j<NUM_SEGMENTS;j++){
     g[1+j]->GetYaxis()->SetRangeUser(min*0.9,max*1.1);
     pad[1]->cd(1+j);

@@ -127,6 +127,8 @@ public:
   unsigned short GetBoardNumber(){return fBoardNumber;}
   //! Returns the detector/module number
   unsigned short GetDetNumber(){return fDetNumber;}
+  //! Returns the detector/module ID
+  unsigned short GetDetID(){return fDetNumber*2+fBoardNumber;}
   //! Returns the Sum contact leading edge time
   unsigned short GetSumLET(){return fSumLET;}
   //! Returns the Sum contact time-stamp
@@ -167,7 +169,7 @@ public:
 
 protected:
   //! From which file was the hit read. (redundant should be equialent to the detector number fDetNumber)
-  short fFileNumber; //!
+  short fFileNumber; 
   //! Flag specifying external/internal trigger
   unsigned short fTrigFlag;
   //! Board number, or crystal number of one module, 0: detector A, 1: detector B

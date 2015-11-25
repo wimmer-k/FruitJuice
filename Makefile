@@ -30,9 +30,15 @@ LFLAGS += -Wl,--no-as-needed
 O_FILES = build/BuildEvents.o
 LIB_O_FILES = build/Grape.o build/GrapeDictionary.o 
 
+all:	Fruit Juice
+
 Fruit:	Fruit.cc $(LIB_DIR)/libGrape.so $(O_FILES) 
 	@echo "Compiling $@"
 	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) $(O_FILES) -o $(BIN_DIR)/$@ 
+
+Juice:	Juice.cc $(LIB_DIR)/libGrape.so 
+	@echo "Compiling $@"
+	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) -o $(BIN_DIR)/$@ 
 
 $(LIB_DIR)/libGrape.so: $(LIB_O_FILES) 
 	@echo "Making $@"

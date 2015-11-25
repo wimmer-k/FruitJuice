@@ -49,8 +49,12 @@ bool BuildEvents::Init(char *settings){
   for(unsigned short i=0; i<fNdet; i++){
     string InputFile = set->GetValue(Form("File.%d",i),(char*)"nofile");
     fDetNumbers[i] = set->GetValue(Form("Detector.Number.%d",i),-1);
-    cout << "reading File."<<i<<" for detector " << fDetNumbers[i] <<"\t" << InputFile << endl;
-    fDatafiles[i] = fopen(InputFile.c_str(),"r");
+    cout << "reading File."<<i<<" for detector " << fDetNumbers[i] <<"\t" << InputFile;
+    fDatafiles[i] = fopen(InputFile.c_str(),"rb");
+    fseek (fDatafiles[i] , 0 , SEEK_END);
+    long long int lSize = ftell (fDatafiles[i]);
+    rewind (fDatafiles[i]);
+    cout << "\t size = " << lSize/(1024*1024) << " MB" << endl;
   }
 
   //fRead stores how many hits per file have been added to the memory, should be 0,1,2
@@ -355,10 +359,6 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
   bsize = fread(buffer, sizeof(unsigned short), 1, fDatafiles[det]);
   HEtoLE((char*)buffer,2);
   int pha = buffer[0];
-  if(pha<1){
-    fErrors[4]++;
-    hitgood = false;
-  }
   hit->SetSumPHA(pha);
   if(fVerboseLevel>1){
     cout << "PHA " << pha <<"\t0x"<<(hex) << pha << (dec) << endl;
@@ -388,12 +388,13 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
   segments.clear();
   segments.resize(NUM_SEGMENTS);
 
-  //48 words for each segments containing the wave
-  unsigned short Swave[9][48];
-  for(int i=0;i<9;i++){
-    bsize = fread(Swave[i], sizeof(unsigned short), 48, fDatafiles[det]);
-    HEtoLE((char*)Swave[i],96);
-    bytes_read += 48*sizeof(unsigned short);
+#ifdef WRITE_WAVE
+  //48 = WAVE_LENGTH words for each segments containing the wave
+  unsigned short Swave[NUM_SEGMENTS][WAVE_LENGTH];
+  for(int i=0;i<NUM_SEGMENTS;i++){
+    bsize = fread(Swave[i], sizeof(unsigned short), WAVE_LENGTH, fDatafiles[det]);
+    HEtoLE((char*)Swave[i],WAVE_LENGTH*2);
+    bytes_read += WAVE_LENGTH*sizeof(unsigned short);
     segments[i].SetSegNumber(i);
     segments[i].SetSegTS(SAbscount[i]);
     segments[i].SetSegPHA(Spha[i]);
@@ -402,12 +403,20 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
     hit->AddSegment(segments[i]);
   }
     
-  //48 words for SUM containing the wave
-  unsigned short wave[48];
-  bsize = fread(wave, sizeof(unsigned short), 48, fDatafiles[det]);
-  HEtoLE((char*)wave,96);
-  bytes_read += 48*sizeof(unsigned short);
+  //48 = WAVE_LENGTH words for SUM containing the wave
+  unsigned short wave[WAVE_LENGTH];
+  bsize = fread(wave, sizeof(unsigned short), WAVE_LENGTH, fDatafiles[det]);
+  HEtoLE((char*)wave,WAVE_LENGTH*2);
+  bytes_read += WAVE_LENGTH*sizeof(unsigned short);
   hit->SetSumWave(vector<unsigned short>(wave, wave + sizeof wave / sizeof wave[0]));
+#else  
+  bsize = fseek(fDatafiles[det], WAVE_LENGTH*2*NUM_SEGMENTS, SEEK_CUR);
+  bsize = fseek(fDatafiles[det], WAVE_LENGTH*2, SEEK_CUR);
+  bytes_read += WAVE_LENGTH*sizeof(unsigned short)*NUM_SEGMENTS;
+  bytes_read += WAVE_LENGTH*sizeof(unsigned short);
+  //fDatafiles[det]->ignore(WAVE_LENGTH*2*NUM_SEGMENTS);
+  //fDatafiles[det]->ignore(WAVE_LENGTH*2);
+#endif
 
   //perform checks here
   //eight words dummy
@@ -446,23 +455,37 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
   if(hitgood && hit->GetSumTS()<fCurrentTS){ 
     fErrors[1]++;
     hitgood = false;
-    if(fVerboseLevel>0){
+    if(fVerboseLevel>0)
       cout <<RED<< "--------------->bad hit! current time is " << fCurrentTS << " this one " << hit->GetSumTS()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
-    }
   }
+  //checking if the time between A and B is sufficiently small
   if(hitgood && prevunpackts>0 && abs(prevunpackts-hit->GetSumTS())>fMaxTSDiff){
     fErrors[2]++;
     hitgood = false;
-    if(fVerboseLevel>0){
-      cout <<RED<< "--------------->bad hit! previous hit read had time " << prevunpackts << " this one " << hit->GetSumTS()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
-    }
+    if(fVerboseLevel>0)
+      cout <<RED<< "--------------->bad hit! previous hit read had time " << prevunpackts << " this one " << hit->GetSumTS()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;    
   }
+  //checking if the detector number is consistent with the setting
   if(hitgood && hit->GetDetNumber() != fDetNumbers[det]){
     fErrors[3]++;
     hitgood = false;
     cout <<RED<< "--------------->bad hit! detector number read " << hit->GetDetNumber()<< " file "<<det<<" is for detector " << fDetNumbers[det] << " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
     hit->Print();
   }
+  //checking if the hit had an energy
+  if(hitgood && hit->GetSumPHA()<1){
+    fErrors[4]++;
+    cout <<RED<< "--------------->bad hit! energy is " << hit->GetSumPHA()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
+    hitgood = false;
+  }
+  //checking if segments reported energies// these occurr a lot skipping for now
+  // if(hitgood && (hit->GetSegMult()==0||hit->GetSegMult()>9)){
+  //   fErrors[5]++;
+  //   if(fVerboseLevel>0)
+  //     cout <<RED<< "--------------->bad hit! number of segments is " << hit->GetSegMult()<< " at buffer "<<fNbuffers<<DEFCOLOR<<endl;
+    
+  //   hitgood = false;
+  // }
 
   // if the hit fails the checks, bail out
   if(!hitgood){
@@ -487,7 +510,6 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
     cout << endl;
   }
   prevunpackts = hit->GetSumTS();
-
   return bytes_read;
 }
 
@@ -584,12 +606,17 @@ pair<long long int,bool> BuildEvents::SkipBytes(unsigned short det, unsigned sho
   Print the couter of different errors that occurred during unpacking, if too many happen, the data file is corrupted
 */
 void BuildEvents::PrintErrors(){
-  char* errorcode[5] = {
-    (char*)"\tHit buffer didn't end with 8 times 0xffff",
-    (char*)"\tTime-stamp of hit is smaller than the current time",
-    (char*)"\tTime-stamp difference too large",
-    (char*)"\tDetector number inconsistent",
-    (char*)"\tSum PHA is 0",
+  char* errorcode[10] = {
+    (char*)"\tHit buffer didn't end with 8 times 0xffff",          //0
+    (char*)"\tTime-stamp of hit is smaller than the current time", //1
+    (char*)"\tTime-stamp difference too large",                    //2
+    (char*)"\tDetector number inconsistent",                       //3
+    (char*)"\tSum PHA is 0",                                       //4
+    (char*)"\tNumber of segments with PHA  is 0 or larger than 9", //5    
+    (char*)"\tundefined error",                                    //6
+    (char*)"\tundefined error",                                    //7
+    (char*)"\tundefined error",                                    //8
+    (char*)"\tundefined error",                                    //9
   };
   for(unsigned short i=0;i<10;i++){
     if(fErrors[i]>0)

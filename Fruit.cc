@@ -6,8 +6,6 @@
 #include "TMath.h"
 #include "TFile.h"
 #include "TTree.h"
-#include "TH1F.h"
-#include "TH2F.h"
 #include "TStopwatch.h"
 #include "CommandLineInterface.hh"
 #include "BuildEvents.hh"
@@ -64,7 +62,7 @@ int main(int argc, char* argv[]){
   
   pair<long long int, bool> readsuccess (0,true);
   while(readsuccess.second && !signal_received){
-    if(buffers % 1000 == 0){
+    if(buffers % 10000 == 0){
       double time_end = get_time();
       cout << "\r" << buffers << " buffers read... "<<bytes_read/(1024*1024)<<" MB... "<<buffers/(time_end - time_start) << " buffers/s" << flush;
     }
