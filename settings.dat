@@ -1,0 +1,7 @@
+Number.Of.Files:	2
+File.0:			201507_136_000006
+Detector.Number.0:	8
+File.1:			0716_134_000006
+Detector.Number.1:	6
+Event.Window:		500
+Coincidence.Gate:	5000000
