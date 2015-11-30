@@ -33,12 +33,12 @@ where `verboselevel` is the level of output printed to stdout, useful for debugg
 Juice is for additional analysis of the data and for making histograms.
 To run it type:
 ```
-Juice -i input.root -o outut.root
+Juice -i input.root -o output.root
 ```
 where `input.root` is the sorted tree created by Fruit, and `output.root` contains the histograms.
 
 Optional flags are:
 ```
-Juice -i input.root -o outut.root -v verboselevel -le lastevent
+Juice -i input.root -o output.root -v verboselevel -le lastevent
 ```
 where `verboselevel` is the level of output printed to stdout, and `lastevent` the number of the last event read from 'input.root'
