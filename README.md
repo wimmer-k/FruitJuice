@@ -6,6 +6,7 @@ This is a program to assist the analysis of data taken with GRAPE
 
 ##Installation:
 - obtain the CommandLineInterface and install it to a directory of your liking
+- if you are using a Mac, copy the included `Makefile.Mac` to `Makefile`
 - in the Makefile change the following line to the directory where you installed the CommandLineInterface:
 ```
 COMMON_DIR = $(HOME)/common
