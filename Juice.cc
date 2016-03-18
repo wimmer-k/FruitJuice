@@ -58,14 +58,18 @@ int main(int argc, char* argv[]){
   TH2F* PHA_vs_detID = new TH2F("PHA_vs_detID","PHA_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,4000);hlist->Add(PHA_vs_detID);
   TH2F* LET_vs_detID = new TH2F("LET_vs_detID","LET_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,16000);hlist->Add(LET_vs_detID);
   TH1F* SumPHA[MAX_NUM_DET*2];
+  TH2F* SegPHA[MAX_NUM_DET*2];
   for(unsigned short j=0;j<MAX_NUM_DET*2;j++){
     SumPHA[j] = new TH1F(Form("SumPHA_%d",j),Form("SumPHA_%d",j),4000,0,4000);hlist->Add(SumPHA[j]);
+    SegPHA[j] = new TH2F(Form("SegPHA_%d",j),Form("SegPHA_%d",j),NUM_SEGMENTS,0,NUM_SEGMENTS,4000,0,4000);hlist->Add(SegPHA[j]);
   }
   TH1F* LET_TDiff = new TH1F("LET_TDiff","LET_TDiff",2000,-16000,16000);hlist->Add(LET_TDiff);
   TH1F* TS_TDiff = new TH1F("TS_TDiff","TS_TDiff",1200,-1000,200);hlist->Add(TS_TDiff);
   TH2F* A_vs_A = new TH2F("A_vs_A","A_vs_A",1000,0,4000,1000,0,4000);hlist->Add(A_vs_A);
   TH2F* B_vs_B = new TH2F("B_vs_B","B_vs_B",1000,0,4000,1000,0,4000);hlist->Add(B_vs_B);
   TH2F* A_vs_B = new TH2F("A_vs_B","A_vs_B",1000,0,4000,1000,0,4000);hlist->Add(A_vs_B);
+
+
 
   TChain* tr;
   tr = new TChain("gtr");
@@ -118,6 +122,10 @@ int main(int argc, char* argv[]){
       PHA_vs_detID->Fill(hit->GetDetID(),hit->GetSumPHA());
       LET_vs_detID->Fill(hit->GetDetID(),hit->GetSumLET());
       SumPHA[(int)hit->GetDetID()]->Fill(hit->GetSumPHA());
+      for(unsigned short j=0;j<hit->GetSegMult();j++){
+	GrapeSeg* seg = hit->GetSegment(j);
+	SegPHA[(int)hit->GetDetID()]->Fill(seg->GetSegNumber(),seg->GetSegPHA());
+      }
     }
     if(gr->GetMult()>1){
       GrapeHit *hit[2];
@@ -160,7 +168,18 @@ int main(int argc, char* argv[]){
 
   cout << "creating outputfile " << endl;
   TFile* ofile = new TFile(OutFile,"recreate");
-  hlist->Write();
+  ofile->cd();
+  TH1F* h1;
+  TH2F* h2;
+  TIter next(hlist);
+  while( (h1 = (TH1F*)next()) ){
+    if(h1->GetEntries()>0)
+      h1->Write("",TObject::kOverwrite);
+  }
+  while( (h2 = (TH2F*)next()) ){
+    if(h2->GetEntries()>0)
+      h2->Write("",TObject::kOverwrite);
+  }
   ofile->Close();
   double time_end = get_time();
   cout << "Program Run time: " << time_end - time_start << " s." << endl;

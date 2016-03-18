@@ -16,7 +16,7 @@ COMMON_DIR = $(HOME)/common
 ##Usage:
 The installation will compile two codes: Fruit and Juice
 ###Fruit:
-Fruit is the unpacker and event-builder part. It reads the raw data files, creates hits (class `GrapeHit`) and combines them together to events (class 'GrapeEvent') base on the difference in time-stamp.
+Fruit is the unpacker and event-builder part. It reads the raw data files, creates hits (class `GrapeHit`) and combines them together to events (class `GrapeEvent`) base on the difference in time-stamp.
 It requires a settings file, specifying the data files for the individual detector modules and the event building window.
 To run Fruit type:
 ```
@@ -42,4 +42,4 @@ Optional flags are:
 ```
 Juice -i input.root -o output.root -v verboselevel -le lastevent
 ```
-where `verboselevel` is the level of output printed to stdout, and `lastevent` the number of the last event read from 'input.root'
+where `verboselevel` is the level of output printed to stdout, and `lastevent` the number of the last event read from `input.root`

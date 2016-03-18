@@ -85,9 +85,8 @@ int main(int argc, char* argv[]){
     evt->CloseEvent();
     if(LastBuffer>-1 &&buffers>LastBuffer)
       break;
-    // if(buffers==10410)     
-    //   evt->SetVL(3);
-  }
+    
+  }//loop over all files
 
   //cleanup
   if(Verbose>0){
