@@ -59,7 +59,12 @@ int main(int argc, char* argv[]){
   
   int buffers=0;
   long long int bytes_read = 0;
-  
+  bytes_read = evt->DetectTimestampJumps();
+  buffers = bytes_read/2048;
+  cout << "skipped "<< buffers << " buffers in the beginning." << endl;
+  if(LastBuffer>-1)
+    LastBuffer += buffers;
+
   pair<long long int, bool> readsuccess (0,true);
   while(readsuccess.second && !signal_received){
     if(buffers % 10000 == 0){

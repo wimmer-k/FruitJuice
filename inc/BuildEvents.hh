@@ -44,7 +44,7 @@ public:
   //! Unpack one detector, read and unpack from one file
   long long int Unpack(unsigned short det);
   //! Unpack one crystal, create a hit, add it to the storage vector
-  long long int UnpackCrystal(unsigned short det, long long int &ts);
+  long long int UnpackCrystal(unsigned short det, long long int &ts, bool checkonly = false);
   //! Sort the hits according to their time stamp
   void SortHits();
   //! Process the hits and build one event
@@ -57,6 +57,10 @@ public:
   bool CheckBufferEnd(unsigned short *buffer);
   //! Skip bytes until the next  8 times 0xffff occurs
   pair<long long int,bool> SkipBytes(unsigned short det, unsigned short buffer[8]);
+  //! Forward all files untile the timestampjump occurs
+  long long int DetectTimestampJumps();
+  //! Skip events until the timestamp jumps back significantly
+  long long int DetectTimestampJump(unsigned short det);
   //! Returns the tree for writing to file
   TTree* GetTree(){return fTree;}
   //! Returns the number of buffers read

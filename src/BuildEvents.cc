@@ -51,9 +51,9 @@ bool BuildEvents::Init(char *settings){
     fDetNumbers[i] = set->GetValue(Form("Detector.Number.%d",i),-1);
     cout << "reading File."<<i<<" for detector " << fDetNumbers[i] <<"\t" << InputFile;
     fDatafiles[i] = fopen(InputFile.c_str(),"rb");
-    fseek (fDatafiles[i] , 0 , SEEK_END);
-    long long int lSize = ftell (fDatafiles[i]);
-    rewind (fDatafiles[i]);
+    fseek(fDatafiles[i] , 0 , SEEK_END);
+    long long int lSize = ftell(fDatafiles[i]);
+    rewind(fDatafiles[i]);
     cout << "\t size = " << lSize/(1024*1024) << " MB" << endl;
   }
 
@@ -89,6 +89,8 @@ bool BuildEvents::Init(char *settings){
   fNhits = 0;
   fCurrentTS = 0;
   fFirstTS = -1;
+  fHits.clear();
+
   for(unsigned short i=0;i<10;i++){
     fErrors[i] =0;
   }
@@ -191,7 +193,7 @@ void BuildEvents::SortHits(){
     cout <<__PRETTY_FUNCTION__ << endl;
   sort(fHits.begin(), fHits.end(), HitComparer());
   if(fVerboseLevel>0){
-    cout <<GREEN<< "sorted"<<DEFCOLOR << endl;
+    cout <<GREEN<< "sorted:"<<DEFCOLOR << endl;
     for(unsigned short i=0;i<fHits.size();i++)
       fHits.at(i)->Print();
   }
@@ -266,7 +268,7 @@ long long int BuildEvents::Unpack(unsigned short det){
 
   //unpack two blocks from file det
   long long int bytes_read = UnpackCrystal(det,unpackTS);
-  bytes_read +=UnpackCrystal(det,unpackTS);
+  bytes_read += UnpackCrystal(det,unpackTS);
 
   
   fNbuffers++;
@@ -275,6 +277,12 @@ long long int BuildEvents::Unpack(unsigned short det){
     cout << "bytes_read " << bytes_read << endl;
     cout << "fHits.size() " << fHits.size() << endl;
   }
+  if(fVerboseLevel>0){
+    cout <<MAGENTA<< "read:"<<DEFCOLOR << endl;
+    for(unsigned short i=0;i<fHits.size();i++)
+      fHits.at(i)->Print();
+  }
+
   return bytes_read;
 }
 
@@ -282,9 +290,10 @@ long long int BuildEvents::Unpack(unsigned short det){
   Unpacks the data from one crystal (detector A and B). The binary data will be unpacked and stored in a GrapeHit, segment information will be added in a vector of GrapeSeg. Basic data integrity check are performed
   \param det the file number or detector module number from which to read
   \param prevunpackts 0 if this is for detector A, TS of A if B will be read
+  \param checkonly if true, the hit will be returned no matter what, even if there is an error
   \return the number of bytes read
 */
-long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevunpackts){
+long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevunpackts, bool checkonly){
   long long int bytes_read = 0;
   bool hitgood = true;
   if(fVerboseLevel>1){
@@ -493,9 +502,13 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
       cout <<RED<< "the current hit will be skipped: "<<DEFCOLOR << endl;
       hit->Print();
     }
+    //only check the timestamps
+    if(checkonly){
+      //store the hit
+      fHits.push_back(hit);
+    }
     return bytes_read;
   }
-
   //store the hit
   fHits.push_back(hit);
   //count up the number of hits
@@ -530,6 +543,67 @@ bool BuildEvents::CheckBufferEnd(unsigned short *buffer){
       return false;
   }
   return true;
+}
+/*!
+  Read double blocks (detector A and B) from each file until a timestamp jump is detected
+  \return the number of bytes read
+*/
+long long int BuildEvents::DetectTimestampJumps(){
+  if(fVerboseLevel>1)
+    cout <<__PRETTY_FUNCTION__ << endl;
+  long long int bytes_read = 0;
+  for(unsigned short i=0; i<fNdet; i++){
+    if(fVerboseLevel>2)
+      cout << "reading from file " << i<< endl;
+    bytes_read += DetectTimestampJump(i);
+  }
+  fNbuffers = 0;
+  fNhits = 0;
+  fCurrentTS = 0;
+  fFirstTS = -1;
+  fHits.clear();
+
+  for(unsigned short i=0;i<10;i++){
+    fErrors[i] =0;
+  }
+  fRead.clear();
+  fRead.resize(fNdet);
+
+  return bytes_read;
+
+}
+/*!
+  Detect the timestamp jump
+  \return the number of bytes read
+*/
+long long int BuildEvents::DetectTimestampJump(unsigned short det){
+  fHits.clear();
+  //remember position in file
+  fpos_t position;
+  long long int bytes_read =0;
+  long long int lastTS[2] ={0,0};
+  bool jumped[2] = {false,false};
+  while(true){
+    long long int unpackTS[2] ={0,0};
+    fgetpos(fDatafiles[det], &position);
+    bytes_read += UnpackCrystal(det,unpackTS[0],true);
+    bytes_read += UnpackCrystal(det,unpackTS[1],true);   
+    if(unpackTS[0]<lastTS[0]){
+      cout << "A jumps back by " << lastTS[0] - unpackTS[0] << endl;
+      jumped[0] = true;
+    }
+    if(unpackTS[1]<lastTS[1]){
+      cout << "B jumps back by " << lastTS[1] - unpackTS[1] << endl;
+      jumped[1] = true;
+    }
+    if(jumped[0] && jumped[1])
+      break;
+    lastTS[0] = unpackTS[0];
+    lastTS[1] = unpackTS[1];
+  }
+  fsetpos(fDatafiles[det], &position);
+  
+  return bytes_read;
 }
 
 /*!
