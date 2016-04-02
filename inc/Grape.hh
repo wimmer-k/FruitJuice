@@ -146,7 +146,7 @@ public:
   //! Returns the Sum contact pulse height amplitude
   unsigned short GetSumPHA(){return fSumPHA;}
   //! Returns the Sum energy
-  unsigned short GetSumEn(){return fSumEn;}
+  float GetSumEn(){return fSumEn;}
   //! Returns the Sum contact waveform
   vector <unsigned short> GetSumWave(){return fSumWave;}
   //! Returns the segment number n

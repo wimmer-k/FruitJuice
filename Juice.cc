@@ -56,16 +56,19 @@ int main(int argc, char* argv[]){
   TH2F* detnumber_vs_board = new TH2F("detnumber_vs_board","detnumber_vs_board",2,0,2,MAX_NUM_DET,0,MAX_NUM_DET);hlist->Add(detnumber_vs_board);
   TH1F* detID = new TH1F("detID","detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(detID);
   TH2F* PHA_vs_detID = new TH2F("PHA_vs_detID","PHA_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,4000);hlist->Add(PHA_vs_detID);
+  TH1F* energy = new TH1F("energy","energy",4000,0,4000);hlist->Add(energy);
   TH2F* En_vs_detID = new TH2F("En_vs_detID","En_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,4000);hlist->Add(En_vs_detID);
   TH2F* LET_vs_detID = new TH2F("LET_vs_detID","LET_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,16000);hlist->Add(LET_vs_detID);
   TH1F* SumPHA[MAX_NUM_DET*2];
   TH1F* SumEn[MAX_NUM_DET*2];
+  TH2F* SumEn_vs_PHA[MAX_NUM_DET*2];
   TH2F* mySumPHA[MAX_NUM_DET*2];
   TH2F* SegPHA[MAX_NUM_DET*2];
   TH2F* SegEn[MAX_NUM_DET*2];
   for(unsigned short j=0;j<MAX_NUM_DET*2;j++){
     SumPHA[j] = new TH1F(Form("SumPHA_%d",j),Form("SumPHA_%d",j),4000,0,4000);hlist->Add(SumPHA[j]);
     SumEn[j] = new TH1F(Form("SumEn_%d",j),Form("SumEn_%d",j),4000,0,4000);hlist->Add(SumEn[j]);
+    SumEn_vs_PHA[j] = new TH2F(Form("SumEn_vs_PHA_%d",j),Form("SumEn_vs_PHA_%d",j),1000,0,2000,1000,0,2000);hlist->Add(SumEn_vs_PHA[j]);
     mySumPHA[j] = new TH2F(Form("mySumPHA_%d",j),Form("mySumPHA_%d",j),1000,0,2000,1000,0,2000);hlist->Add(mySumPHA[j]);
     SegPHA[j] = new TH2F(Form("SegPHA_%d",j),Form("SegPHA_%d",j),NUM_SEGMENTS,0,NUM_SEGMENTS,4000,0,4000);hlist->Add(SegPHA[j]);
     SegEn[j] = new TH2F(Form("SegEn_%d",j),Form("SegEn_%d",j),NUM_SEGMENTS,0,NUM_SEGMENTS,4000,0,4000);hlist->Add(SegEn[j]);
@@ -126,11 +129,13 @@ int main(int argc, char* argv[]){
       detnumber->Fill(hit->GetDetNumber());
       board->Fill(hit->GetBoardNumber());
       detID->Fill(hit->GetDetID());
+      energy->Fill(hit->GetSumEn());
       PHA_vs_detID->Fill(hit->GetDetID(),hit->GetSumPHA());
       En_vs_detID->Fill(hit->GetDetID(),hit->GetSumEn());
       LET_vs_detID->Fill(hit->GetDetID(),hit->GetSumLET());
       SumPHA[(int)hit->GetDetID()]->Fill(hit->GetSumPHA());
       SumEn[(int)hit->GetDetID()]->Fill(hit->GetSumEn());
+      SumEn_vs_PHA[(int)hit->GetDetID()]->Fill(hit->GetSumPHA(),hit->GetSumEn());
       double segsum = 0;
       for(unsigned short k=0;k<hit->GetSegMult();k++){
 	GrapeSeg* seg = hit->GetSegment(k);

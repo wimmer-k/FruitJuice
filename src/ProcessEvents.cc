@@ -10,6 +10,7 @@ void ProcessEvents::Init(char *settings){
   if(fVerboseLevel>2)
     cout <<__PRETTY_FUNCTION__<< endl;
 
+  fRand = new TRandom();
   cout << "reading settings file: " << settings << endl;
   TEnv* set = new TEnv(settings);
   string calfile = set->GetValue("Calibration.File",(char*)"nofile");
@@ -45,7 +46,9 @@ void ProcessEvents::Calibrate(GrapeEvent* event){
       
       double en = 0;
       if(seg->GetSegPHA()>0){
-	en = fgain[det][board][seg->GetSegNumber()]*seg->GetSegPHA() + foffs[det][board][seg->GetSegNumber()];
+	//assuming PHA is calculated from the waveform, not like an ADC value
+	en = seg->GetSegPHA()-0.5+fRand->Uniform(0,1);
+	en = fgain[det][board][seg->GetSegNumber()]*en + foffs[det][board][seg->GetSegNumber()];
 	if(en>0){
 	  sum+=en;
 	  seg->SetSegEn(en);

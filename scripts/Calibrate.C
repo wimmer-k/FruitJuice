@@ -31,6 +31,11 @@ void Calibrate(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
     }
   }
 }
+void Calibrate(int det, int board){
+  TFile *f = new TFile("/mnt/raid/OEDO/GRAPE/htest.root");
+  TH2F* h = (TH2F*)f->Get(Form("SegPHA_%d",det*2+board));
+  Calibrate(h,det,0);
+}
 void test(){
   TFile *f = new TFile("/mnt/raid/OEDO/GRAPE/htest.root");
   TH2F* hA = (TH2F*)f->Get("SegPHA_20");
@@ -48,7 +53,7 @@ void Calibrate(TH2F* h, int det, int board){
     if(hs[s]->Integral(2,4000)<100)
       continue;    
     TSpectrum *sp = new TSpectrum(2);
-    hs[s]->GetXaxis()->SetRangeUser(900,1200);
+    hs[s]->GetXaxis()->SetRangeUser(900,1400);
     Int_t nfound = sp->Search(hs[s],2,"nobackground",0.2);
     
     cout << "Found " << nfound << " peaks in spectrum" << endl;

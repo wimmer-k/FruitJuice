@@ -6,6 +6,7 @@
 #include "TTree.h"
 #include "TEnv.h"
 #include "TObject.h"
+#include "TRandom.h"
 
 #include "Globaldefs.h"
 #include "Grapedefs.h"
@@ -32,6 +33,8 @@ public:
 protected:
   //! Verbose level
   unsigned short fVerboseLevel;
+  //! Random number generator for the calibration
+  TRandom* fRand;
   //! The gain parameters for all segments
   float fgain[MAX_NUM_DET][2][NUM_SEGMENTS];
   //! The offsets for the segments
