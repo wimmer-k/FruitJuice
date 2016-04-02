@@ -46,13 +46,15 @@ void ProcessEvents::Calibrate(GrapeEvent* event){
       double en = 0;
       if(seg->GetSegPHA()>0){
 	en = fgain[det][board][seg->GetSegNumber()]*seg->GetSegPHA() + foffs[det][board][seg->GetSegNumber()];
-	if(en>0)
+	if(en>0){
 	  sum+=en;
-	seg->SetSegEn(en);
+	  seg->SetSegEn(en);
+	}
       }
       //cout << k << "\tsegnumber = " << seg->GetSegNumber()<< "\tpha = " << seg->GetSegPHA() << "\ten = " << seg->GetSegEn() << endl;
     }
-    hit->SetSumEn(sum);
+    if(sum>0)
+      hit->SetSumEn(sum);
   }
   //cout << "after" << endl;
   //event->Print();
