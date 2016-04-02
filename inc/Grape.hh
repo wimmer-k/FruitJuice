@@ -23,6 +23,7 @@ public:
     fSegNumber = sqrt(-1);
     fSegTS = sqrt(-1);
     fSegPHA = sqrt(-1);
+    fSegEn = sqrt(-1);
     fSegWave.clear();
     fSegWave.resize(WAVE_LENGTH);
   }
@@ -32,6 +33,8 @@ public:
   void SetSegTS(unsigned short segTS){fSegTS = segTS;}
   //! Set the segment pulse height amplitude
   void SetSegPHA(unsigned short segPHA){fSegPHA = segPHA;}
+  //! Set the segment energy
+  void SetSegEn(float segEn){fSegEn = segEn;}
   //! Set the segment waveform a sample n
   void SetSegWave(unsigned short n, unsigned short segWave){fSegWave.at(n) = segWave;}
   //! Set the segment waveform
@@ -43,6 +46,8 @@ public:
   unsigned short GetSegTS(){return fSegTS;}
   //! Returns the segment pulse height amplitude
   unsigned short GetSegPHA(){return fSegPHA;}
+  //! Returns the segment energy
+  float GetSegEn(){return fSegEn;}
   //! Returns the segment waveform
   vector <unsigned short> GetWave(){return fSegWave;}
 
@@ -53,6 +58,8 @@ protected:
   unsigned short fSegTS;
   //! Pulse height amplitude of the SEG signal
   unsigned short fSegPHA;
+  //! calibrated energy of the segment
+  float fSegEn;
   //! Waveform of the SEG signal
 #ifdef WRITE_WAVE
   vector <unsigned short> fSegWave;
@@ -83,6 +90,7 @@ public:
     fSumLET = sqrt(-1);
     fSumTS = sqrt(-1);
     fSumPHA = sqrt(-1);
+    fSumEn = sqrt(-1);
     fSumWave.clear();
     fSumWave.resize(WAVE_LENGTH);
     fSegments.clear();
@@ -102,6 +110,8 @@ public:
   void SetSumTS(long long int sumTS){fSumTS = sumTS;}
   //! Set the Sum contact pulse height amplitude
   void SetSumPHA(unsigned short sumPHA){fSumPHA = sumPHA;}
+  //! Set the Sum energy
+  void SetSumEn(float sumEn){fSumEn = sumEn;}
   //! Set the Sum contact waveform a sample n
   void SetSumWave(unsigned short n, unsigned short sumWave){fSumWave.at(n) = sumWave;}
   //! Set the Sum contact waveform
@@ -135,6 +145,8 @@ public:
   long long int GetSumTS(){return fSumTS;}
   //! Returns the Sum contact pulse height amplitude
   unsigned short GetSumPHA(){return fSumPHA;}
+  //! Returns the Sum energy
+  unsigned short GetSumEn(){return fSumEn;}
   //! Returns the Sum contact waveform
   vector <unsigned short> GetSumWave(){return fSumWave;}
   //! Returns the segment number n
@@ -160,6 +172,7 @@ public:
     cout << "\tBN: " << fBoardNumber;
     cout << "\tTS: " << fSumTS;
     cout << "\tPHA: "<< fSumPHA;
+    cout << "\tEn: "<< fSumEn;
     if(HasSumWave())
       cout << "\tWAVE: Y";
     else 
@@ -182,6 +195,8 @@ protected:
   long long int fSumTS;
   //! Pulse height amplitude of the SUM signal
   unsigned short fSumPHA;
+  //! calibrated sum energy 
+  float fSumEn;
   //! Waveform of the SUM signal
 #ifdef WRITE_WAVE
   vector <unsigned short> fSumWave;

@@ -9,6 +9,7 @@
 #include "TStopwatch.h"
 #include "CommandLineInterface.hh"
 #include "BuildEvents.hh"
+#include "ProcessEvents.hh"
 
 using namespace TMath;
 using namespace std;
@@ -23,10 +24,10 @@ int main(int argc, char* argv[]){
   signal(SIGINT,signalhandler);
   int LastBuffer =-1;
   int Verbose =0;
-  char *SetFile = NULL;
-  char *RootFile = NULL;
+  char* SetFile = NULL;
+  char* RootFile = NULL;
   int WriteTree = 1;
-
+  int Calibrate = 1;
   //Read in the command line arguments
   CommandLineInterface* interface = new CommandLineInterface();
   interface->Add("-lb", "last buffer to be read", &LastBuffer);  
@@ -34,6 +35,7 @@ int main(int argc, char* argv[]){
   interface->Add("-o", "output file", &RootFile);    
   interface->Add("-v", "verbose level", &Verbose);  
   interface->Add("-wt", "write the tree", &WriteTree);  
+  interface->Add("-c", "calibrate (default is on)", &Calibrate);  
   interface->CheckFlags(argc, argv);
 
   //Complain about missing mandatory arguments
@@ -47,16 +49,19 @@ int main(int argc, char* argv[]){
     //return 2;
   }
   //open the output files
-  TFile *ofile = new TFile(RootFile,"RECREATE");
+  TFile* ofile = new TFile(RootFile,"RECREATE");
   
-  BuildEvents *evt = new BuildEvents();
+  BuildEvents* evt = new BuildEvents();
   evt->SetVL(Verbose);
   evt->SetWriteTree(WriteTree);
   if(!evt->Init(SetFile)){
     cerr << "Initialization failed! Check settings file!" << endl;
     return 99;
   }
-  
+  ProcessEvents* proc = new ProcessEvents();
+  proc->SetVL(Verbose);
+  proc->Init(SetFile);
+
   int buffers=0;
   long long int bytes_read = 0;
   bytes_read = evt->DetectTimestampJumps();
@@ -82,7 +87,10 @@ int main(int argc, char* argv[]){
     }
     evt->SortHits();
     evt->ProcessHits();
+    if(Calibrate)
+      proc->Calibrate(evt->GetEvent());
     evt->CloseEvent();
+    
     if(LastBuffer>-1 &&buffers>LastBuffer)
       break;
     
@@ -96,6 +104,8 @@ int main(int argc, char* argv[]){
   while(evt->GetHitsLeft()>0){
     evt->SortHits();
     evt->ProcessHits();
+    if(Calibrate)
+      proc->Calibrate(evt->GetEvent());
     evt->CloseEvent();
   }
 

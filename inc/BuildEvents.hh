@@ -61,6 +61,8 @@ public:
   long long int DetectTimestampJumps();
   //! Skip events until the timestamp jumps back significantly
   long long int DetectTimestampJump(unsigned short det);
+  //! Returns pointer to the current event
+  GrapeEvent* GetEvent(){return fEvent;}
   //! Returns the tree for writing to file
   TTree* GetTree(){return fTree;}
   //! Returns the number of buffers read
@@ -80,7 +82,7 @@ protected:
   //! should the tree be written to file
   bool fWriteTree;
   //! Tree which will be filled
-  TTree *fTree;
+  TTree* fTree;
   //! The number of buffers read
   unsigned int fNbuffers;
   //! The number of hits read (should be 2*fNbuffers, if there are no errors)
@@ -109,7 +111,7 @@ protected:
   vector<unsigned short> fRead;
 
   //! The built event, 
-  GrapeEvent *fEvent;
+  GrapeEvent* fEvent;
   //! Vector containing the individual hits, time sorted
   vector<GrapeHit*> fHits;
 };

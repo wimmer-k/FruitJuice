@@ -136,6 +136,51 @@ void PlotRaw(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
     gPad->SetLogz();
   }
 }
+void PlotCal(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htestcal.root"){
+  TFile *f = new TFile(file);
+  vector<TH2F*> h;
+  for(unsigned short m=0;m<MAX_NUM_DET;m++){
+    TH2F* hA = NULL;
+    TH2F* hB = NULL;
+    hA = (TH2F*)f->Get(Form("SegEn_%d",m*2));
+    hB = (TH2F*)f->Get(Form("SegEn_%d",m*2+1));
+    if(hA!=NULL){
+      h.push_back(hA);
+    }
+    if(hB!=NULL){
+      h.push_back(hB);
+    }
+  }
+  cout << h.size() << " crystals found" << endl;
+  TCanvas * c = new TCanvas("c","c");
+  if(h.size()<=2)
+    c->Divide(2,1);
+  else if(h.size()<=4)
+    c->Divide(2,2);
+  else if(h.size()<=6)
+    c->Divide(2,3);
+  else if(h.size()<=9)
+    c->Divide(3,3);
+  else if(h.size()<=12)
+    c->Divide(3,4);
+  else if(h.size()<=16)
+    c->Divide(4,4);
+  else if(h.size()<=20)
+    c->Divide(4,5);
+  else if(h.size()<=30)
+    c->Divide(5,6);
+  else if(h.size()<=36)
+    c->Divide(6,6);
+  else{
+    cout << "too many detectors found" <<endl;
+    return;
+  }
+  for(unsigned short j=0;j<h.size();j++){
+    c->cd(1+j);
+    h.at(j)->Draw("colz");
+    gPad->SetLogz();
+  }
+}
 Double_t gausbg(Double_t *x, Double_t *par){
   static Float_t sqrt2pi = TMath::Sqrt(2*TMath::Pi()), sqrt2 = TMath::Sqrt(2.);
   Double_t arg;

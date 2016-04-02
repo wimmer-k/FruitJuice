@@ -27,7 +27,7 @@ LFLAGS += $(SWITCH)
 CFLAGS += -Wl,--no-as-needed
 LFLAGS += -Wl,--no-as-needed
 
-O_FILES = build/BuildEvents.o
+O_FILES = build/BuildEvents.o build/ProcessEvents.o
 LIB_O_FILES = build/Grape.o build/GrapeDictionary.o 
 
 all:	Fruit Juice
@@ -44,7 +44,7 @@ $(LIB_DIR)/libGrape.so: $(LIB_O_FILES)
 	@echo "Making $@"
 	@$(CPP) $(LFLAGS) -o $@ $^ -lc
 
-build/BuildEvents.o: src/BuildEvents.cc inc/BuildEvents.hh $(LIB_DIR)/libGrape.so 
+build/%Events.o: src/%Events.cc inc/%Events.hh $(LIB_DIR)/libGrape.so 
 	@echo "Compiling $@"
 	@mkdir -p $(dir $@)
 	@$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@ 
