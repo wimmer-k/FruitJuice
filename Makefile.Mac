@@ -60,7 +60,7 @@ build/GrapeDictionary.o: build/GrapeDictionary.cc
 build/GrapeDictionary.cc: inc/Grape.hh inc/GrapeLinkDef.h
 	@echo "Building $@"
 	@mkdir -p build
-	@rootcint -f $@ -c $(INCLUDES) $(ROOTCFLAGS) $(SWITCH) $(notdir $^)
+	@rootcint -f $@ -c $(INCLUDES) $(SWITCH) $(notdir $^)
 
 doc:	doxyconf
 	doxygen doxyconf
