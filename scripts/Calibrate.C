@@ -12,15 +12,17 @@
 using namespace std;
 using namespace TMath;
 double lbinw;
+TFile *ffile;
 Double_t gausbg(Double_t *x, Double_t *par);
 void Calibrate(TH2F* h, int det, int board);
+void SetFile(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root");
 void Calibrate(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
-  TFile *f = new TFile(file);
+  SetFile(file);
   for(unsigned short m=0;m<MAX_NUM_DET;m++){
     TH2F* hA = NULL;
     TH2F* hB = NULL;
-    hA = (TH2F*)f->Get(Form("SegPHA_%d",m*2));
-    hB = (TH2F*)f->Get(Form("SegPHA_%d",m*2+1));
+    hA = (TH2F*)ffile->Get(Form("SegPHA_%d",m*2));
+    hB = (TH2F*)ffile->Get(Form("SegPHA_%d",m*2+1));
     if(hA!=NULL){
       cout << "calibrating " << m << " A"<< endl;
       Calibrate(hA,m,0);
@@ -32,18 +34,16 @@ void Calibrate(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
   }
 }
 void Calibrate(int det, int board){
-  TFile *f = new TFile("/mnt/raid/OEDO/GRAPE/htest.root");
-  TH2F* h = (TH2F*)f->Get(Form("SegPHA_%d",det*2+board));
+  TH2F* h = (TH2F*)ffile->Get(Form("SegPHA_%d",det*2+board));
   Calibrate(h,det,0);
 }
 void test(){
-  TFile *f = new TFile("/mnt/raid/OEDO/GRAPE/htest.root");
-  TH2F* hA = (TH2F*)f->Get("SegPHA_20");
+  TH2F* hA = (TH2F*)ffile->Get("SegPHA_20");
   Calibrate(hA,10,0);
 }
 void Calibrate(TH2F* h, int det, int board){
   TEnv *calfile = new TEnv("/mnt/raid/OEDO/GRAPE/cal.dat");
-  TCanvas * c = new TCanvas("c","c");
+  TCanvas * c = new TCanvas("c","c",800,600);
   c->Divide(3,3);
   TH1F* hs[NUM_SEGMENTS];
   TF1* fs[NUM_SEGMENTS][2];
@@ -54,7 +54,7 @@ void Calibrate(TH2F* h, int det, int board){
       continue;    
     TSpectrum *sp = new TSpectrum(2);
     hs[s]->GetXaxis()->SetRangeUser(900,1400);
-    Int_t nfound = sp->Search(hs[s],2,"nobackground",0.2);
+    Int_t nfound = sp->Search(hs[s],1,"nobackground",0.6);
     
     cout << "Found " << nfound << " peaks in spectrum" << endl;
     hs[s]->GetXaxis()->SetRangeUser(1,4000);
@@ -97,13 +97,13 @@ void Calibrate(TH2F* h, int det, int board){
   calfile->SaveLevel(kEnvLocal);
 }
 void PlotRaw(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
-  TFile *f = new TFile(file);
+  SetFile(file);
   vector<TH2F*> h;
   for(unsigned short m=0;m<MAX_NUM_DET;m++){
     TH2F* hA = NULL;
     TH2F* hB = NULL;
-    hA = (TH2F*)f->Get(Form("SegPHA_%d",m*2));
-    hB = (TH2F*)f->Get(Form("SegPHA_%d",m*2+1));
+    hA = (TH2F*)ffile->Get(Form("SegPHA_%d",m*2));
+    hB = (TH2F*)ffile->Get(Form("SegPHA_%d",m*2+1));
     if(hA!=NULL){
       h.push_back(hA);
     }
@@ -112,7 +112,7 @@ void PlotRaw(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
     }
   }
   cout << h.size() << " crystals found" << endl;
-  TCanvas * c = new TCanvas("c","c");
+  TCanvas * c = new TCanvas("c","c",800,800);
   if(h.size()<=2)
     c->Divide(2,1);
   else if(h.size()<=4)
@@ -142,13 +142,13 @@ void PlotRaw(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htest.root"){
   }
 }
 void PlotCal(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htestcal.root"){
-  TFile *f = new TFile(file);
+  SetFile(file);
   vector<TH2F*> h;
   for(unsigned short m=0;m<MAX_NUM_DET;m++){
     TH2F* hA = NULL;
     TH2F* hB = NULL;
-    hA = (TH2F*)f->Get(Form("SegEn_%d",m*2));
-    hB = (TH2F*)f->Get(Form("SegEn_%d",m*2+1));
+    hA = (TH2F*)ffile->Get(Form("SegEn_%d",m*2));
+    hB = (TH2F*)ffile->Get(Form("SegEn_%d",m*2+1));
     if(hA!=NULL){
       h.push_back(hA);
     }
@@ -157,7 +157,7 @@ void PlotCal(char* file = (char*)"/mnt/raid/OEDO/GRAPE/htestcal.root"){
     }
   }
   cout << h.size() << " crystals found" << endl;
-  TCanvas * c = new TCanvas("c","c");
+  TCanvas * c = new TCanvas("c","c",800,800);
   if(h.size()<=2)
     c->Divide(2,1);
   else if(h.size()<=4)
@@ -207,4 +207,7 @@ Double_t gausbg(Double_t *x, Double_t *par){
   result += lbinw/(sqrt2pi*sigma) * norm * exp(-arg*arg);
 
   return result;
+}
+void SetFile(char* file){
+  ffile = new TFile(file);
 }

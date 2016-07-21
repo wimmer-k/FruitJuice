@@ -79,6 +79,10 @@ int main(int argc, char* argv[]){
   TH2F* B_vs_B = new TH2F("B_vs_B","B_vs_B",1000,0,4000,1000,0,4000);hlist->Add(B_vs_B);
   TH2F* A_vs_B = new TH2F("A_vs_B","A_vs_B",1000,0,4000,1000,0,4000);hlist->Add(A_vs_B);
 
+  TH2F* A_vs_A_pha = new TH2F("A_vs_A_pha","A_vs_A_pha",1000,0,4000,1000,0,4000);hlist->Add(A_vs_A_pha);
+  TH2F* B_vs_B_pha = new TH2F("B_vs_B_pha","B_vs_B_pha",1000,0,4000,1000,0,4000);hlist->Add(B_vs_B_pha);
+  TH2F* A_vs_B_pha = new TH2F("A_vs_B_pha","A_vs_B_pha",1000,0,4000,1000,0,4000);hlist->Add(A_vs_B_pha);
+
 
 
   TChain* tr;
@@ -160,16 +164,24 @@ int main(int argc, char* argv[]){
 	    continue;
 	  hit[1] = gr->GetHit(k);
 	  if(hit[0]->GetBoardNumber()==0){//A
-	    if(hit[1]->GetBoardNumber()==0)//A
+	    if(hit[1]->GetBoardNumber()==0){//A
+	      A_vs_A_pha->Fill(hit[0]->GetSumPHA(),hit[1]->GetSumPHA());
 	      A_vs_A->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
-	    if(hit[1]->GetBoardNumber()==1)//B
-	      A_vs_B->Fill(hit[1]->GetSumEn(),hit[0]->GetSumEn());	    
+	    }
+	    if(hit[1]->GetBoardNumber()==1){//B
+	      A_vs_B_pha->Fill(hit[1]->GetSumPHA(),hit[0]->GetSumPHA());
+	      A_vs_B->Fill(hit[1]->GetSumEn(),hit[0]->GetSumEn());
+	    }
 	  }
 	  if(hit[0]->GetBoardNumber()==1){//B
-	    if(hit[1]->GetBoardNumber()==0)//A
+	    if(hit[1]->GetBoardNumber()==0){//A
+	      A_vs_B_pha->Fill(hit[0]->GetSumPHA(),hit[1]->GetSumPHA());
 	      A_vs_B->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
-	    if(hit[1]->GetBoardNumber()==1)//B
-	      B_vs_B->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());	    
+	    }
+	    if(hit[1]->GetBoardNumber()==1){//B
+	      B_vs_B_pha->Fill(hit[0]->GetSumPHA(),hit[1]->GetSumPHA());
+	      B_vs_B->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
+	    }
 	  }
 	}
       }

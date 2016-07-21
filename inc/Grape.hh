@@ -123,9 +123,9 @@ public:
       cout << "adding segment mult > " << NUM_SEGMENTS << endl;
       return;
     }
-    fSegments.push_back(add);
     if(add.GetSegPHA()>0){
       fSegMult++;
+      fSegments.push_back(add);
     }
   }
   
