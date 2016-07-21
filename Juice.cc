@@ -56,7 +56,6 @@ int main(int argc, char* argv[]){
   TH2F* detnumber_vs_board = new TH2F("detnumber_vs_board","detnumber_vs_board",2,0,2,MAX_NUM_DET,0,MAX_NUM_DET);hlist->Add(detnumber_vs_board);
   TH1F* detID = new TH1F("detID","detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(detID);
   TH2F* PHA_vs_detID = new TH2F("PHA_vs_detID","PHA_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,4000);hlist->Add(PHA_vs_detID);
-  TH1F* energy = new TH1F("energy","energy",4000,0,4000);hlist->Add(energy);
   TH2F* En_vs_detID = new TH2F("En_vs_detID","En_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,4000);hlist->Add(En_vs_detID);
   TH2F* LET_vs_detID = new TH2F("LET_vs_detID","LET_vs_detID",MAX_NUM_DET*2,0,MAX_NUM_DET*2,2000,0,16000);hlist->Add(LET_vs_detID);
   TH1F* SumPHA[MAX_NUM_DET*2];
@@ -84,6 +83,8 @@ int main(int argc, char* argv[]){
   TH2F* A_vs_B_pha = new TH2F("A_vs_B_pha","A_vs_B_pha",1000,0,4000,1000,0,4000);hlist->Add(A_vs_B_pha);
 
 
+  TH1F* egam = new TH1F("egam","egam",4000,0,4000);hlist->Add(egam);
+  TH2F* egamegam = new TH2F("egamegam","egamegam",2000,0,2000,2000,0,2000);hlist->Add(egamegam);
 
   TChain* tr;
   tr = new TChain("gtr");
@@ -133,7 +134,7 @@ int main(int argc, char* argv[]){
       detnumber->Fill(hit->GetDetNumber());
       board->Fill(hit->GetBoardNumber());
       detID->Fill(hit->GetDetID());
-      energy->Fill(hit->GetSumEn());
+      egam->Fill(hit->GetSumEn());
       PHA_vs_detID->Fill(hit->GetDetID(),hit->GetSumPHA());
       En_vs_detID->Fill(hit->GetDetID(),hit->GetSumEn());
       LET_vs_detID->Fill(hit->GetDetID(),hit->GetSumLET());
@@ -183,9 +184,13 @@ int main(int argc, char* argv[]){
 	      B_vs_B->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
 	    }
 	  }
-	}
-      }
-    }
+	  if(hit[0]->GetSumEn()>=hit[1]->GetSumEn())
+	    egamegam->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
+	  else
+	    egamegam->Fill(hit[1]->GetSumEn(),hit[0]->GetSumEn());
+	}//mult k
+      }//mult j
+    }//mult >0
 
     if(i%100000 == 0){
       double time_end = get_time();

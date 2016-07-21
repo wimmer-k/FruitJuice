@@ -123,10 +123,15 @@ public:
       cout << "adding segment mult > " << NUM_SEGMENTS << endl;
       return;
     }
+#ifdef WRITE_WAVE
+    fSegMult++;
+    fSegments.push_back(add);
+#else
     if(add.GetSegPHA()>0){
       fSegMult++;
       fSegments.push_back(add);
     }
+#endif
   }
   
   //! Returns the file number 

@@ -397,21 +397,27 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
   segments.clear();
   segments.resize(NUM_SEGMENTS);
 
-#ifdef WRITE_WAVE
   //48 = WAVE_LENGTH words for each segments containing the wave
-  unsigned short Swave[NUM_SEGMENTS][WAVE_LENGTH];
   for(int i=0;i<NUM_SEGMENTS;i++){
-    bsize = fread(Swave[i], sizeof(unsigned short), WAVE_LENGTH, fDatafiles[det]);
-    HEtoLE((char*)Swave[i],WAVE_LENGTH*2);
+
+#ifdef WRITE_WAVE
+    unsigned short Swave[WAVE_LENGTH];
+    bsize = fread(Swave, sizeof(unsigned short), WAVE_LENGTH, fDatafiles[det]);
+    HEtoLE((char*)Swave,WAVE_LENGTH*2);
     bytes_read += WAVE_LENGTH*sizeof(unsigned short);
+    segments[i].SetSegWave(vector<unsigned short>(Swave, Swave + sizeof Swave / sizeof Swave[0]));
+#else  
+    bsize = fseek(fDatafiles[det], WAVE_LENGTH*2, SEEK_CUR);
+    bytes_read += WAVE_LENGTH*sizeof(unsigned short);
+#endif
     segments[i].SetSegNumber(i);
     segments[i].SetSegTS(SAbscount[i]);
     segments[i].SetSegPHA(Spha[i]);
-    segments[i].SetSegWave(vector<unsigned short>(Swave[i], Swave[i] + sizeof Swave[i] / sizeof Swave[i][0]));
       
     hit->AddSegment(segments[i]);
   }
     
+#ifdef WRITE_WAVE
   //48 = WAVE_LENGTH words for SUM containing the wave
   unsigned short wave[WAVE_LENGTH];
   bsize = fread(wave, sizeof(unsigned short), WAVE_LENGTH, fDatafiles[det]);
@@ -419,12 +425,8 @@ long long int BuildEvents::UnpackCrystal(unsigned short det,long long int &prevu
   bytes_read += WAVE_LENGTH*sizeof(unsigned short);
   hit->SetSumWave(vector<unsigned short>(wave, wave + sizeof wave / sizeof wave[0]));
 #else  
-  bsize = fseek(fDatafiles[det], WAVE_LENGTH*2*NUM_SEGMENTS, SEEK_CUR);
   bsize = fseek(fDatafiles[det], WAVE_LENGTH*2, SEEK_CUR);
-  bytes_read += WAVE_LENGTH*sizeof(unsigned short)*NUM_SEGMENTS;
   bytes_read += WAVE_LENGTH*sizeof(unsigned short);
-  //fDatafiles[det]->ignore(WAVE_LENGTH*2*NUM_SEGMENTS);
-  //fDatafiles[det]->ignore(WAVE_LENGTH*2);
 #endif
 
   //perform checks here

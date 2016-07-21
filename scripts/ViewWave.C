@@ -12,7 +12,7 @@ void SetFile(char* filename){
   ffilename = filename;
 }
 void ViewWave(int n){
-  TCanvas *c = new TCanvas("c","c",0,0,1200,600);
+  TCanvas *c = new TCanvas("c","c",1200,600);
   TPad *pad[2];
   pad[0] = new TPad("p0","p0",0,0,0.5,1);
   pad[1] = new TPad("p1","p1",0.5,0,1,1);
