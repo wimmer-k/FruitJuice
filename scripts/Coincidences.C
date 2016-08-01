@@ -4,7 +4,7 @@ TH1F* hpx[5];
 TH1F* hpy[5];
 TH1F* hpt[5];
 int reb = 1;
-char* filename = "/mnt/raid/OEDO/GRAPE/hist05.root";
+char* filename = "/mnt/raid/OEDO/GRAPE/asupe.root";
 void loadhistos();
 void reset();
 void setreb(int inreb){

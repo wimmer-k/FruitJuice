@@ -74,6 +74,10 @@ bool BuildEvents::Init(char *settings){
   fTree = new TTree("gtr","GRAPE built events");
   fTree->Branch("grape",&fEvent,320000);
   fTree->BranchRef();
+  fTree->SetAutoSave(-300000000);	
+  fTree->SetAutoFlush(-100000000);	
+
+  
   if(!fWriteTree){
     cout << "No tree written to file" << endl;
   }

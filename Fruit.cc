@@ -50,6 +50,7 @@ int main(int argc, char* argv[]){
   }
   //open the output files
   TFile* ofile = new TFile(RootFile,"RECREATE");
+  ofile->cd();
   
   BuildEvents* evt = new BuildEvents();
   evt->SetVL(Verbose);
@@ -75,6 +76,9 @@ int main(int argc, char* argv[]){
     if(buffers % 10000 == 0){
       double time_end = get_time();
       cout << "\r" << buffers << " buffers read... "<<bytes_read/(1024*1024)<<" MB... "<<buffers/(time_end - time_start) << " buffers/s" << flush;
+      if(buffers % 100000 == 0){
+	evt->GetTree()->AutoSave();
+      }
     }
     if(Verbose>0)
       cout << "------------------------------------" << endl;
@@ -121,7 +125,7 @@ int main(int argc, char* argv[]){
   ofile->cd();
 
   if(WriteTree)
-    evt->GetTree()->Write();
+    evt->GetTree()->Write("",TObject::kOverwrite);
   ofile->Close();
   double time_end = get_time();
   cout << "Program Run time: " << time_end - time_start << " s." << endl;
