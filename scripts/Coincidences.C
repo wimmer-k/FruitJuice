@@ -115,8 +115,8 @@ void sub(double from, double to, double bg0=0, double bg1=0, double bg2=0, doubl
   }
   hpx[2]->Scale(0.5*width[0]/width[2]);
   hpy[2]->Scale(0.5*width[0]/width[2]);
-  hpt[2] = (TH1F*)hpx[2]->Clone("hpt1");
-  hpt[2]->Add(hpy[1],1);
+  hpt[2] = (TH1F*)hpx[2]->Clone("hpt2");
+  hpt[2]->Add(hpy[2],1);
   
   hpx[3] = (TH1F*)hpx[0]->Clone("hpx3");
   hpx[3]->Add(hpx[1],-1);
