@@ -91,8 +91,10 @@ int main(int argc, char* argv[]){
     }
     evt->SortHits();
     evt->ProcessHits();
-    if(Calibrate)
+    if(Calibrate){
       proc->Calibrate(evt->GetEvent());
+      proc->AddBack(evt->GetEvent());
+    }
     evt->CloseEvent();
     
     if(LastBuffer>-1 &&buffers>LastBuffer)

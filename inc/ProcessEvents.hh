@@ -30,6 +30,10 @@ public:
   void Init(char *settings);
   //! Calibrate the event
   void Calibrate(GrapeEvent* event);
+  //! Perform the add-back
+  void AddBack(GrapeEvent* event);
+  //! Check if two hits are supposed to be added
+  bool AddBack(GrapeHit* hit0, GrapeHit* hit1);
 protected:
   //! Verbose level
   unsigned short fVerboseLevel;

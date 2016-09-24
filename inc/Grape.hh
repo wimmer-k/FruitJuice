@@ -81,6 +81,14 @@ public:
   GrapeHit(){
     Clear();
   }
+  //! constructor for the basic information only
+  GrapeHit(int board, int det, long long int timestamp, float sumEn){
+    Clear();
+    fBoardNumber = board;
+    fDetNumber = det;
+    fSumTS = timestamp;
+    fSumEn = sumEn;    
+  }
   //! Clear the hit information, including the segments
   void Clear(Option_t *option = ""){
     fFileNumber = -1;
@@ -231,6 +239,8 @@ public:
   void Clear(Option_t *option = ""){
     fMult = 0;
     fHits.clear();
+    fMultAB = 0;
+    fHitsAB.clear();
   }
   //! Returns the multiplicity of the event
   unsigned short GetMult(){return fMult;}
@@ -241,17 +251,33 @@ public:
     fHits.push_back(add);
     fMult++;
   }
+  //! Returns the multiplicity of the event after add-back
+  unsigned short GetMultAB(){return fMultAB;}
+  //! Returns the hit number i after add-back
+  GrapeHit* GetHitAB(unsigned short i){return fHitsAB.at(i);}
+  //! Add a add-back hit to the event 
+  void AddAB(GrapeHit* add){
+    fHitsAB.push_back(add);
+    fMultAB++;
+  }
   //! Printing information
   void Print(Option_t *option = "") const {
     cout << "multiplicity " << fMult << " event" << endl;
     for(unsigned short i=0;i<fHits.size();i++)
       fHits.at(i)->Print();
+    cout << "multiplicity " << fMultAB << " after add-back" << endl;
+    for(unsigned short i=0;i<fHitsAB.size();i++)
+      fHitsAB.at(i)->Print();
   } 
 protected:
   //! a vector containing the hits which belong to the event
   vector <GrapeHit*> fHits;
   //! multiplicity of hits in the event
   unsigned short fMult;
+  //! a vector containing the add-back hits which belong to the event
+  vector <GrapeHit*> fHitsAB;
+  //! multiplicity of add-back hits in the event
+  unsigned short fMultAB;
 
   /// \cond CLASSIMP
   ClassDef(GrapeEvent,1);

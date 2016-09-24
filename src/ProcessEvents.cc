@@ -34,8 +34,8 @@ void ProcessEvents::Init(char *settings){
   return;
 }
 void ProcessEvents::Calibrate(GrapeEvent* event){
-  //cout << "before" << endl;
-  //event->Print();
+  if(fVerboseLevel>2)
+    cout <<__PRETTY_FUNCTION__<< endl;
   for(unsigned short j=0;j<event->GetMult();j++){
     GrapeHit *hit = event->GetHit(j);
     double sum =0;
@@ -62,4 +62,56 @@ void ProcessEvents::Calibrate(GrapeEvent* event){
   //cout << "after" << endl;
   //event->Print();
 
+}
+void ProcessEvents::AddBack(GrapeEvent* event){
+  if(fVerboseLevel>2)
+    cout <<__PRETTY_FUNCTION__<< endl;
+  vector<GrapeHit*> unusedhits;
+  for(unsigned short j=0;j<event->GetMult();j++){
+    GrapeHit *hit = event->GetHit(j);
+    int det = hit->GetDetNumber();
+    int board = hit->GetBoardNumber();
+    long long int sumTS = hit->GetSumTS();
+    float sumEn = hit->GetSumEn();
+    unusedhits.push_back(new GrapeHit(board,det, sumTS, sumEn));
+  }
+  while(unusedhits.size() > 0){
+    //first one is automatically good
+    GrapeHit* thishit = unusedhits.back();
+    unusedhits.pop_back();
+    
+    bool added = false;
+    do{
+      added = false;
+      for(unsigned short j=0;j<unusedhits.size();j++){
+	if(AddBack(thishit,unusedhits.at(j))){
+	  if(thishit->GetSumEn()>unusedhits.at(j)->GetSumEn()){
+	    thishit->SetDetNumber(thishit->GetDetNumber());
+	    thishit->SetBoardNumber(thishit->GetBoardNumber());
+	    thishit->SetSumTS(thishit->GetSumTS());
+	  }
+	  else{
+	    thishit->SetDetNumber(unusedhits.at(j)->GetDetNumber());
+	    thishit->SetBoardNumber(unusedhits.at(j)->GetBoardNumber());
+	    thishit->SetSumTS(unusedhits.at(j)->GetSumTS());	  
+	  }
+	  thishit->SetSumEn(thishit->GetSumEn()+unusedhits.at(j)->GetSumEn());
+	  added = true;
+	  unusedhits.erase(unusedhits.begin() + j);
+	  break;
+	}
+      }
+    }while(added);
+    event->AddAB(thishit);
+  }//while
+  if(fVerboseLevel>2)
+    event->Print();
+}
+bool ProcessEvents::AddBack(GrapeHit* hit0, GrapeHit* hit1){
+  if(hit0->GetDetNumber()==hit1->GetDetNumber()){
+    if(hit0->GetBoardNumber()!=hit1->GetBoardNumber())
+      return true;
+    return false;
+  }
+  return false;
 }

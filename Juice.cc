@@ -86,6 +86,10 @@ int main(int argc, char* argv[]){
   TH1F* egam = new TH1F("egam","egam",4000,0,4000);hlist->Add(egam);
   TH2F* egamegam = new TH2F("egamegam","egamegam",2000,0,2000,2000,0,2000);hlist->Add(egamegam);
 
+  TH1F* multAB = new TH1F("multAB","multAB",MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(multAB);
+  TH1F* egamAB = new TH1F("egamAB","egamAB",4000,0,4000);hlist->Add(egamAB);
+  TH2F* egamegamAB = new TH2F("egamegamAB","egamegamAB",2000,0,2000,2000,0,2000);hlist->Add(egamegamAB);
+
   TChain* tr;
   tr = new TChain("gtr");
   for(unsigned int i=0; i<InputFiles.size(); i++){
@@ -128,6 +132,7 @@ int main(int argc, char* argv[]){
     
     //start analysis
     mult->Fill(gr->GetMult());
+    multAB->Fill(gr->GetMultAB());
     for(unsigned short j=0;j<gr->GetMult();j++){
       GrapeHit *hit = gr->GetHit(j);
       detnumber_vs_board->Fill(hit->GetBoardNumber(),hit->GetDetNumber());
@@ -191,7 +196,26 @@ int main(int argc, char* argv[]){
 	}//mult k
       }//mult j
     }//mult >0
+    for(unsigned short j=0;j<gr->GetMultAB();j++){
+      GrapeHit *hit = gr->GetHitAB(j);
+      egamAB->Fill(hit->GetSumEn());
+    }
+    if(gr->GetMultAB()>1){
+      GrapeHit *hit[2];
+      for(unsigned short j=0;j<gr->GetMultAB();j++){
+	hit[0] = gr->GetHitAB(j);
+	for(unsigned short k=0;k<gr->GetMultAB();k++){
+	  if(k==j)
+	    continue;
+	  hit[1] = gr->GetHitAB(k);
+	  if(hit[0]->GetSumEn()>=hit[1]->GetSumEn())
+	    egamegamAB->Fill(hit[0]->GetSumEn(),hit[1]->GetSumEn());
+	  else
+	    egamegamAB->Fill(hit[1]->GetSumEn(),hit[0]->GetSumEn());
+	}//mult k
+      }//mult j
 
+    }
     if(i%100000 == 0){
       double time_end = get_time();
       cout << setw(5) << setiosflags(ios::fixed) << setprecision(1) << (100.*i)/nentries <<
