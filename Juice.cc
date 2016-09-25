@@ -85,10 +85,13 @@ int main(int argc, char* argv[]){
 
   TH1F* egam = new TH1F("egam","egam",4000,0,4000);hlist->Add(egam);
   TH2F* egamegam = new TH2F("egamegam","egamegam",2000,0,2000,2000,0,2000);hlist->Add(egamegam);
+  TH2F* egammult = new TH2F("egammult","egammult",2000,0,2000,MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(egammult);
 
   TH1F* multAB = new TH1F("multAB","multAB",MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(multAB);
   TH1F* egamAB = new TH1F("egamAB","egamAB",4000,0,4000);hlist->Add(egamAB);
   TH2F* egamegamAB = new TH2F("egamegamAB","egamegamAB",2000,0,2000,2000,0,2000);hlist->Add(egamegamAB);
+  TH2F* egamABmult = new TH2F("egamABmult","egamABmult",2000,0,2000,MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(egamABmult);
+  TH2F* egamABmultAB = new TH2F("egamABmultAB","egamABmultAB",2000,0,2000,MAX_NUM_DET*2,0,MAX_NUM_DET*2);hlist->Add(egamABmultAB);
 
   TChain* tr;
   tr = new TChain("gtr");
@@ -140,6 +143,7 @@ int main(int argc, char* argv[]){
       board->Fill(hit->GetBoardNumber());
       detID->Fill(hit->GetDetID());
       egam->Fill(hit->GetSumEn());
+      egammult->Fill(hit->GetSumEn(),gr->GetMult());
       PHA_vs_detID->Fill(hit->GetDetID(),hit->GetSumPHA());
       En_vs_detID->Fill(hit->GetDetID(),hit->GetSumEn());
       LET_vs_detID->Fill(hit->GetDetID(),hit->GetSumLET());
@@ -199,6 +203,8 @@ int main(int argc, char* argv[]){
     for(unsigned short j=0;j<gr->GetMultAB();j++){
       GrapeHit *hit = gr->GetHitAB(j);
       egamAB->Fill(hit->GetSumEn());
+      egamABmult->Fill(hit->GetSumEn(),gr->GetMult());
+      egamABmultAB->Fill(hit->GetSumEn(),gr->GetMultAB());
     }
     if(gr->GetMultAB()>1){
       GrapeHit *hit[2];
