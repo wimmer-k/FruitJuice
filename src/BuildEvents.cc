@@ -72,6 +72,8 @@ bool BuildEvents::Init(char *settings){
   fEvent = new GrapeEvent;
   //setup tree
   fTree = new TTree("gtr","GRAPE built events");
+  double maxtreesize = set->GetValue("MaxTreeSize.GB",2.0);
+  fTree->SetMaxTreeSize((int)(maxtreesize*1000000000));
   fTree->Branch("grape",&fEvent,320000);
   fTree->BranchRef();
   fTree->SetAutoSave(-300000000);	

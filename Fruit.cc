@@ -110,8 +110,10 @@ int main(int argc, char* argv[]){
   while(evt->GetHitsLeft()>0){
     evt->SortHits();
     evt->ProcessHits();
-    if(Calibrate)
+    if(Calibrate){
       proc->Calibrate(evt->GetEvent());
+      proc->AddBack(evt->GetEvent());
+    }
     evt->CloseEvent();
   }
 
@@ -124,11 +126,11 @@ int main(int argc, char* argv[]){
   cout << "had to skip " << evt->GetSkippedWords() << " words (" << evt->GetSkippedWords()*2./1024 << " kB)" << endl;
   cout << "The following errors happend during unpacking" << endl;
   evt->PrintErrors();
-  ofile->cd();
+  evt->GetTree()->GetCurrentFile()->cd();
 
   if(WriteTree)
     evt->GetTree()->Write("",TObject::kOverwrite);
-  ofile->Close();
+  evt->GetTree()->GetCurrentFile()->Close();
   double time_end = get_time();
   cout << "Program Run time: " << time_end - time_start << " s." << endl;
   cout << "Unpacked " << evt->GetNBuffers()/(time_end - time_start) << " buffers/s." << endl;
